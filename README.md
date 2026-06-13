@@ -43,8 +43,16 @@ Set `embeddings.provider: openai` in config.
 Search the index:
 
 ```bash
-uv run python scripts/search_class.py "What is the Perron-Frobenius theorem?"
+uv run python scripts/search_class.py "What is the singular value decomposition?"
 ```
+
+**Web UI** (search + index size table):
+
+```bash
+uv run python scripts/search_ui.py
+```
+
+Opens http://127.0.0.1:7860 — compare retrieval across compressed indexes.
 
 ### Canvas PDFs (optional; image-heavy slides)
 

@@ -14,6 +14,8 @@ dependencies = [
     "scipy>=1.14",
     "openai>=1.0",
     "pymupdf>=1.24",
+    "pymupdf4llm>=1.27.2.3",
+    "gradio>=5.0",
 ]
 
 [build-system]

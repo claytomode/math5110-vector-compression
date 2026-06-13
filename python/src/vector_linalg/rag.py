@@ -276,6 +276,59 @@ def _compressed_index(
     raise ValueError(f"Unknown compression method: {method!r}")
 
 
+def list_compression_methods(cfg: ProjectConfig, dim: int) -> list[str]:
+    methods = ["full_precision"]
+    for k in cfg.compression.jl_dims:
+        if k < dim:
+            methods.append(f"jl_{k}")
+    for k in cfg.compression.rank_k:
+        methods.append(f"rank_{k}")
+    methods.append("sign_1bit")
+    for bits in cfg.compression.scalar_bits:
+        methods.append(f"scalar_{bits}bit")
+    return methods
+
+
+def index_storage_bytes(comp: CompressedVectors, n: int, d: int) -> int:
+    """Approximate in-memory index size for n vectors of dimension d."""
+    bits = comp.bits_per_dim * n * d
+    method = comp.metadata.get("method")
+    if method == "johnson_lindenstrauss":
+        r = comp.metadata.get("r")
+        if r is not None:
+            bits += int(r.size) * 32
+    elif method == "rank_k_svd":
+        basis = comp.metadata.get("basis")
+        if basis is not None:
+            bits += int(basis.size) * 32
+    elif method == "scalar_uniform":
+        bits += int(2 * d * 32)
+    elif method == "sign_quantization":
+        bits += int(n * 32)
+    return int(bits / 8)
+
+
+def storage_report(bundle: RagBundle, cfg: ProjectConfig) -> list[dict[str, float | str]]:
+    keys = bundle.chunk_matrix
+    n, d = keys.shape
+    baseline = n * d * 4
+    rng = np.random.default_rng(cfg.random_seed)
+    rows: list[dict[str, float | str]] = []
+    for method in list_compression_methods(cfg, d):
+        comp = _compressed_index(keys, method, cfg, rng)
+        nbytes = index_storage_bytes(comp, n, d)
+        rows.append(
+            {
+                "method": method,
+                "index_bytes": nbytes,
+                "index_mb": round(nbytes / 1_000_000, 3),
+                "compression_ratio": round(baseline / max(nbytes, 1), 2),
+                "bits_per_dim": round(comp.bits_per_dim, 2),
+            }
+        )
+    return rows
+
+
 def search_corpus(
     query: str,
     bundle: RagBundle,
