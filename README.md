@@ -1,7 +1,7 @@
 # Vector compression for high-dimensional data
 
 **Survey:** Johnson–Lindenstrauss sketches, spectral truncation, sign quantization  
-**Application:** compress embeddings on token vectors and RAG retrieval (demo yaml corpus or **Canvas course PDFs**)
+**Application:** compress embeddings on token vectors and RAG retrieval over the **[MATH 5110 Quarto book](https://github.com/wanghemath/Book-AdvancedLinearAlgebraAI)** (recommended) or optional Canvas PDFs
 
 Course project for applied linear algebra. Inspired by recent work on extreme vector compression ([Google Research — TurboQuant](https://research.google/blog/turboquant-redefining-ai-efficiency-with-extreme-compression/)); this repo implements **pedagogical** versions of the same linear-algebra ideas on word/token embeddings — not a reproduction of LLM KV-cache inference.
 
@@ -11,7 +11,7 @@ Course project for applied linear algebra. Inspired by recent work on extreme ve
 |------|---------|
 | **1. Survey** | JL lemma, random projections, rank‑k / polar geometry, 1-bit signs, scalar quantization |
 | **2. Computation** | NumPy implementations + recall@k / distance distortion metrics |
-| **3. Application** | Token + RAG retrieval under compression; optional Canvas PDF corpus |
+| **3. Application** | Token + RAG retrieval under compression; **GitHub book** (default) or Canvas PDFs |
 
 ## Quick start
 
@@ -36,7 +36,17 @@ OPENAI_API_KEY=sk-...
 
 Set `embeddings.provider: openai` in config.
 
-### Canvas PDFs (optional RAG corpus)
+### RAG corpus (default: professor's GitHub book)
+
+`python/config.yaml` uses `rag.source: github_book`, which pulls chapter `.qmd` files from [wanghemath/Book-AdvancedLinearAlgebraAI](https://github.com/wanghemath/Book-AdvancedLinearAlgebraAI). This is the MATH 5110 interactive textbook source — readable text with LaTeX stripped, no PDF OCR. The [GitHub Pages site](https://wanghemath.github.io/Book-AdvancedLinearAlgebraAI/) may 404; the repo still works.
+
+Search the index:
+
+```bash
+uv run python scripts/search_class.py "What is the Perron-Frobenius theorem?"
+```
+
+### Canvas PDFs (optional; image-heavy slides)
 
 1. Canvas → **Account → Settings → Approved Integrations** → create access token.
 2. Add to `.env`:

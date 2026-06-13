@@ -21,6 +21,7 @@ python/data/canvas_chunks.json
 python/data/metadata.json
 python/data/rag_metadata.json
 python/data/chunk_manifest.json
+python/data/github_book/
 
 # OS / IDE
 .DS_Store

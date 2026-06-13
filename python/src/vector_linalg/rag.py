@@ -10,6 +10,7 @@ import polars as pl
 import yaml
 
 from vector_linalg.canvas import build_canvas_chunks
+from vector_linalg.github_book import build_github_book_chunks
 from vector_linalg.compression import (
     CompressedVectors,
     compress_rank_k,
@@ -100,7 +101,27 @@ def build_corpus_chunks(cfg: ProjectConfig, *, refresh: bool = False) -> tuple[l
         print(f"  -> {len(chunks)} chunks from Canvas pages/PDFs")
         return [c.chunk_id for c in chunks], [c.text for c in chunks]
 
-    raise RuntimeError(f"Unknown rag.source: {cfg.rag.source!r} (use yaml or canvas)")
+    if cfg.rag.source == "github_book":
+        chunks = build_github_book_chunks(
+            cfg.rag.github_book,
+            chunk_chars=cfg.rag.chunk_chars,
+            chunk_overlap=cfg.rag.chunk_overlap,
+            cache_dir=cfg.github_book_cache_dir,
+            refresh=refresh,
+        )
+        manifest = [
+            {"chunk_id": c.chunk_id, "source_file": c.source_file, "preview": c.text[:200]}
+            for c in chunks
+        ]
+        (cfg.data_dir / "chunk_manifest.json").write_text(
+            json.dumps(manifest, indent=2),
+            encoding="utf-8",
+        )
+        return [c.chunk_id for c in chunks], [c.text for c in chunks]
+
+    raise RuntimeError(
+        f"Unknown rag.source: {cfg.rag.source!r} (use yaml, canvas, or github_book)"
+    )
 
 
 def fetch_rag_embeddings(cfg: ProjectConfig, *, refresh: bool = False) -> RagBundle:

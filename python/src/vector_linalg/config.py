@@ -31,6 +31,14 @@ class CanvasConfig:
 
 
 @dataclass(frozen=True)
+class GithubBookConfig:
+    owner: str
+    repo: str
+    branch: str
+    chapters_dir: str
+
+
+@dataclass(frozen=True)
 class RagConfig:
     enabled: bool
     source: str
@@ -40,6 +48,7 @@ class RagConfig:
     chunk_chars: int
     chunk_overlap: int
     canvas: CanvasConfig
+    github_book: GithubBookConfig
 
 
 @dataclass(frozen=True)
@@ -77,6 +86,10 @@ class ProjectConfig:
         return self.figures_dir / "rag"
 
     @property
+    def github_book_cache_dir(self) -> Path:
+        return self.data_dir / "github_book"
+
+    @property
     def canvas_pdf_dir(self) -> Path:
         return self.data_dir / "canvas_pdfs"
 
@@ -104,6 +117,7 @@ def load_config(path: Path | None = None) -> ProjectConfig:
     emb = raw.get("embeddings", {})
     rag = raw.get("rag", {})
     canvas = rag.get("canvas", {})
+    book = rag.get("github_book", {})
     return ProjectConfig(
         repo_root=root,
         data_dir=root / "python" / "data",
@@ -127,6 +141,12 @@ def load_config(path: Path | None = None) -> ProjectConfig:
             chunk_overlap=int(rag.get("chunk_overlap", 120)),
             canvas=CanvasConfig(
                 course_id=canvas.get("course_id"),
+            ),
+            github_book=GithubBookConfig(
+                owner=book.get("owner", "wanghemath"),
+                repo=book.get("repo", "Book-AdvancedLinearAlgebraAI"),
+                branch=book.get("branch", "main"),
+                chapters_dir=book.get("chapters_dir", "chapters"),
             ),
         ),
         n_query_tokens=int(raw.get("n_query_tokens", 80)),
