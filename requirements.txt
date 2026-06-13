@@ -7,4 +7,4 @@ scikit-learn>=1.5
 scipy>=1.14
 openai>=1.0
 pymupdf>=1.24
-gradio>=5.0
+pymupdf4llm>=1.27.2.3

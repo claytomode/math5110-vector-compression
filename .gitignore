@@ -1,5 +1,7 @@
 # Python / uv
 .venv/
+backend/.venv/
+backend/python/
 __pycache__/
 *.py[cod]
 *.egg-info/
@@ -23,8 +25,12 @@ python/data/rag_metadata.json
 python/data/chunk_manifest.json
 python/data/github_book/
 
-# OS / IDE
-.DS_Store
+# Frontend
+node_modules/
+frontend/.svelte-kit/
+frontend/build/
+
+.reference-lin-prog/
 Thumbs.db
 .idea/
 .vscode/

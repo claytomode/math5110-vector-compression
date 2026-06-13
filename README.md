@@ -46,13 +46,22 @@ Search the index:
 uv run python scripts/search_class.py "What is the singular value decomposition?"
 ```
 
-**Web UI** (search + index size table):
+**Web UI** (Svelte + FastAPI — search + index size table):
+
+Requires [uv](https://docs.astral.sh/uv/) (API) and [Bun](https://bun.sh) (frontend). From the repo root:
 
 ```bash
-uv run python scripts/search_ui.py
+uv sync --directory backend
+bun install
+cd frontend && bun install && cd ..
+bun run dev
 ```
 
-Opens http://127.0.0.1:7860 — compare retrieval across compressed indexes.
+`bun run dev` starts **uvicorn** via `uv run --directory backend` (port 8010) and **Vite** via `bun run dev` in `frontend/` (port 5173).
+
+Or: `uv run python scripts/search_ui.py` (same thing).
+
+Opens http://127.0.0.1:5173 — compare retrieval across compressed indexes.
 
 ### Canvas PDFs (optional; image-heavy slides)
 

@@ -16,8 +16,8 @@ from vector_linalg.config import ProjectConfig
 def _load_dotenv() -> None:
     """Load KEY=VALUE lines from repo .env if present (not committed)."""
     for parent in Path(__file__).resolve().parents:
-        env_path = parent / ".env"
-        if (parent / "pyproject.toml").exists():
+        if (parent / "python" / "config.yaml").exists():
+            env_path = parent / ".env"
             if not env_path.exists():
                 return
             for line in env_path.read_text(encoding="utf-8").splitlines():

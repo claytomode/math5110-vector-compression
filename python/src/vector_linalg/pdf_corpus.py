@@ -21,6 +21,20 @@ def _normalize_whitespace(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
+def chunk_is_usable(text: str, *, min_words: int = 12, min_alnum_ratio: float = 0.38) -> bool:
+    """Drop near-empty pages, TOC dot-leaders, and image-only PDF regions."""
+    text = _normalize_whitespace(text)
+    if len(text) < 60:
+        return False
+    if text.count("....") >= 8:
+        return False
+    words = re.findall(r"[A-Za-z]{3,}", text)
+    if len(words) < min_words:
+        return False
+    alnum = len(re.findall(r"[A-Za-z0-9]", text))
+    return alnum / len(text) >= min_alnum_ratio
+
+
 def extract_pdf_text(path: Path) -> str:
     doc = fitz.open(path)
     try:

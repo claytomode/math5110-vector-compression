@@ -102,15 +102,27 @@ class ProjectConfig:
 
 def _repo_root() -> Path:
     here = Path(__file__).resolve()
+    pyproject_candidates: list[Path] = []
     for parent in here.parents:
-        if (parent / "pyproject.toml").exists():
+        if (parent / "python" / "config.yaml").exists():
             return parent
+        if (parent / "pyproject.toml").exists():
+            pyproject_candidates.append(parent)
+    for parent in pyproject_candidates:
+        if (parent / "python").is_dir():
+            return parent
+    if pyproject_candidates:
+        return pyproject_candidates[0]
     return here.parents[4]
 
 
 def load_config(path: Path | None = None) -> ProjectConfig:
-    root = _repo_root()
-    cfg_path = path or root / "python" / "config.yaml"
+    if path is not None:
+        cfg_path = path.resolve()
+        root = cfg_path.parents[1]
+    else:
+        root = _repo_root()
+        cfg_path = root / "python" / "config.yaml"
     raw = yaml.safe_load(cfg_path.read_text(encoding="utf-8"))
 
     comp = raw.get("compression", {})

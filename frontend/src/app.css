@@ -1,0 +1,68 @@
+/* Design tokens — warm paper / ink, editorial serif + clean sans + mono */
+
+:root {
+  --font-sans: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Newsreader", ui-serif, "Palatino Linotype", Palatino, Georgia, serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Code", Consolas, monospace;
+
+  --color-bg: #e8e4dc;
+  --color-bg-deep: #ddd8cf;
+  --color-surface: #faf7f1;
+  --color-surface-raised: #fffefb;
+  --color-border: #cfc8bc;
+  --color-border-strong: #a39a8c;
+  --color-text: #1a1814;
+  --color-text-muted: #5c564c;
+  --color-text-faint: #7a7368;
+
+  --color-accent: #1d4b45;
+  --color-accent-hover: #163c37;
+  --color-danger: #9b1c1c;
+  --color-danger-bg: #fce8e8;
+
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow: 0 1px 0 rgba(26, 24, 20, 0.06), 0 12px 40px rgba(26, 24, 20, 0.08);
+  --shadow-inset: inset 0 1px 2px rgba(26, 24, 20, 0.06);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.55;
+  font-weight: 450;
+  letter-spacing: -0.01em;
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  background-image: radial-gradient(1200px 600px at 12% -10%, #f5f0e6 0%, transparent 55%),
+    radial-gradient(900px 500px at 100% 0%, #ebe4d9 0%, transparent 50%);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--color-accent);
+}
+
+code,
+kbd {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  font-weight: 500;
+  background: var(--color-bg-deep);
+  color: var(--color-text);
+  padding: 0.12em 0.4em;
+  border-radius: 5px;
+  border: 1px solid var(--color-border);
+}
