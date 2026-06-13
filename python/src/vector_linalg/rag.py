@@ -218,3 +218,70 @@ def run_rag_compression_study(bundle: RagBundle, cfg: ProjectConfig) -> list[Met
             )
         )
     return results
+
+
+@dataclass(frozen=True)
+class SearchHit:
+    chunk_id: str
+    text: str
+    score: float
+    rank: int
+
+
+def _compressed_index(
+    keys: np.ndarray,
+    method: str,
+    cfg: ProjectConfig,
+    rng: np.random.Generator,
+) -> CompressedVectors:
+    if method == "full_precision":
+        return CompressedVectors(
+            name="full_precision",
+            keys=keys.astype(np.float32),
+            bits_per_dim=32.0,
+            metadata={"method": "none"},
+        )
+    if method.startswith("jl_"):
+        k = int(method.split("_", 1)[1])
+        return build_jl_compressed(keys, k, rng)
+    if method.startswith("rank_"):
+        k = int(method.split("_", 1)[1])
+        return compress_rank_k(keys, k)
+    if method == "sign_1bit":
+        return compress_sign(keys)
+    if method.startswith("scalar_"):
+        bits = int(method.split("_", 1)[1].replace("bit", ""))
+        return compress_scalar(keys, bits)
+    raise ValueError(f"Unknown compression method: {method!r}")
+
+
+def search_corpus(
+    query: str,
+    bundle: RagBundle,
+    cfg: ProjectConfig,
+    *,
+    top_k: int = 5,
+    method: str = "full_precision",
+) -> list[SearchHit]:
+    """Embed a question and return top matching lecture chunks from the class index."""
+    from vector_linalg.compression import cosine_scores, scores_from_compressed
+
+    q = embed_texts([query.strip()], cfg)[0]
+    keys = bundle.chunk_matrix
+    rng = np.random.default_rng(cfg.random_seed)
+    comp = _compressed_index(keys, method, cfg, rng)
+    if comp.metadata.get("method") == "none":
+        scores = cosine_scores(keys, q)
+    else:
+        scores = scores_from_compressed(keys, q, comp)
+
+    order = np.argsort(-scores)[:top_k]
+    return [
+        SearchHit(
+            chunk_id=bundle.chunk_ids[i],
+            text=bundle.chunk_texts[i],
+            score=float(scores[i]),
+            rank=rank,
+        )
+        for rank, i in enumerate(order, start=1)
+    ]
