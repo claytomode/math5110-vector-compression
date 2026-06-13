@@ -12,7 +12,7 @@ Recent systems work such as [TurboQuant](https://research.google/blog/turboquant
 2. **1-bit Johnson–Lindenstrauss-style** residuals,
 3. **Theoretical guarantees** on distortion.
 
-This project surveys those ideas and applies simplified versions to **token embedding vectors** (GloVe).
+This project surveys those ideas and applies simplified versions to **OpenAI token embedding vectors**.
 
 ---
 
@@ -76,14 +76,16 @@ These mirror vector-search benchmarks (1@k recall) discussed in the TurboQuant b
 
 - **Token embedding table:** each token type \(\mapsto\) vector in \(\mathbb{R}^d\).
 - **KV cache:** sequence positions store key vectors; compression reduces memory during long-context inference.
-- **Our application:** GloVe word vectors as a stand-in embedding table; nearest-neighbor recall simulates “find similar tokens / entries under compression.”
+- **RAG index:** document chunks are embedded and stored; queries retrieve top-\(k\) chunks before generation.
 
-We do **not** run transformer inference; the point is the **shared linear algebra**.
+**Our application:** OpenAI/Azure embeddings for (1) a token list and (2) a small RAG corpus with labeled queries. We measure whether compression preserves nearest-neighbor structure and **RAG hit@\(k\)** on the gold passage.
+
+We do **not** run transformer generation; the point is the **shared linear algebra** of compressed retrieval.
 
 ---
 
 ## References
 
-- Pennington, Socher, Manning (2014). [GloVe](https://nlp.stanford.edu/projects/glove/).
 - Johnson & Lindenstrauss (1984). Extensions of Lipschitz maps into Hilbert space.
+- OpenAI (2024). [Embeddings guide](https://platform.openai.com/docs/guides/embeddings).
 - Zandieh, Mirrokni et al. (2026). [TurboQuant blog](https://research.google/blog/turboquant-redefining-ai-efficiency-with-extreme-compression/).

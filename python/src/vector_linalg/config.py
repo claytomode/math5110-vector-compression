@@ -16,14 +16,40 @@ class CompressionSweep:
 
 
 @dataclass(frozen=True)
+class EmbeddingsConfig:
+    provider: str
+    model: str
+    dimensions: int | None
+    batch_size: int
+    azure_deployment: str | None
+    azure_api_version: str
+
+
+@dataclass(frozen=True)
+class CanvasConfig:
+    course_id: int | None
+
+
+@dataclass(frozen=True)
+class RagConfig:
+    enabled: bool
+    source: str
+    corpus_path: Path
+    queries_path: Path
+    recall_k: int
+    chunk_chars: int
+    chunk_overlap: int
+    canvas: CanvasConfig
+
+
+@dataclass(frozen=True)
 class ProjectConfig:
     repo_root: Path
     data_dir: Path
     figures_dir: Path
-    glove_url: str
-    glove_dim: int
-    max_glove_scan_lines: int
     tokens: tuple[str, ...]
+    embeddings: EmbeddingsConfig
+    rag: RagConfig
     n_query_tokens: int
     n_distance_pairs: int
     recall_k: int
@@ -35,8 +61,30 @@ class ProjectConfig:
         return self.data_dir / "token_embeddings.parquet"
 
     @property
+    def rag_chunks_cache(self) -> Path:
+        return self.data_dir / "rag_chunk_embeddings.parquet"
+
+    @property
+    def rag_queries_cache(self) -> Path:
+        return self.data_dir / "rag_query_embeddings.parquet"
+
+    @property
     def metadata_path(self) -> Path:
         return self.data_dir / "metadata.json"
+
+    @property
+    def figures_rag_dir(self) -> Path:
+        return self.figures_dir / "rag"
+
+    @property
+    def canvas_pdf_dir(self) -> Path:
+        return self.data_dir / "canvas_pdfs"
+
+    def rel_path(self, path: Path) -> str:
+        try:
+            return str(path.relative_to(self.repo_root))
+        except ValueError:
+            return str(path)
 
 
 def _repo_root() -> Path:
@@ -53,17 +101,34 @@ def load_config(path: Path | None = None) -> ProjectConfig:
     raw = yaml.safe_load(cfg_path.read_text(encoding="utf-8"))
 
     comp = raw.get("compression", {})
+    emb = raw.get("embeddings", {})
+    rag = raw.get("rag", {})
+    canvas = rag.get("canvas", {})
     return ProjectConfig(
         repo_root=root,
         data_dir=root / "python" / "data",
         figures_dir=root / "python" / "figures",
-        glove_url=raw.get(
-            "glove_url",
-            "https://nlp.stanford.edu/data/glove.6B.zip",
-        ),
-        glove_dim=int(raw.get("glove_dim", 50)),
-        max_glove_scan_lines=int(raw.get("max_glove_scan_lines", 400_000)),
         tokens=tuple(raw["tokens"]),
+        embeddings=EmbeddingsConfig(
+            provider=emb.get("provider", "openai"),
+            model=emb.get("model", "text-embedding-3-small"),
+            dimensions=emb.get("dimensions"),
+            batch_size=int(emb.get("batch_size", 128)),
+            azure_deployment=emb.get("azure_deployment"),
+            azure_api_version=emb.get("azure_api_version", "2024-02-01"),
+        ),
+        rag=RagConfig(
+            enabled=bool(rag.get("enabled", True)),
+            source=rag.get("source", "yaml"),
+            corpus_path=root / "python" / "data" / rag.get("corpus_file", "rag_corpus.yaml"),
+            queries_path=root / "python" / "data" / rag.get("queries_file", "rag_queries.yaml"),
+            recall_k=int(rag.get("recall_k", 3)),
+            chunk_chars=int(rag.get("chunk_chars", 900)),
+            chunk_overlap=int(rag.get("chunk_overlap", 120)),
+            canvas=CanvasConfig(
+                course_id=canvas.get("course_id"),
+            ),
+        ),
         n_query_tokens=int(raw.get("n_query_tokens", 80)),
         n_distance_pairs=int(raw.get("n_distance_pairs", 2000)),
         recall_k=int(raw.get("recall_k", 10)),

@@ -1,0 +1,40 @@
+# Labeled queries for RAG hit@k evaluation.
+# When using Canvas PDFs, run: uv run python scripts/list_rag_chunks.py
+# then set relevant_chunk to a chunk id from the manifest.
+
+queries:
+  - text: "How does Johnson-Lindenstrauss reduce dimension while keeping distances?"
+    relevant_chunk: jl_lemma
+
+  - text: "What is TurboQuant used for in LLM systems?"
+    relevant_chunk: turboquant
+
+  - text: "How do you score vectors after 1-bit sign compression?"
+    relevant_chunk: sign_quant
+
+  - text: "Explain rank-k SVD compression for a matrix of embeddings."
+    relevant_chunk: rank_k_svd
+
+  - text: "What are the steps in a basic RAG pipeline?"
+    relevant_chunk: rag_overview
+
+  - text: "Why might compressed embeddings break document retrieval?"
+    relevant_chunk: rag_compression
+
+  - text: "When is a covariance matrix valid for a quadratic risk term?"
+    relevant_chunk: psd_covariance
+
+  - text: "What optimization problem does Markowitz portfolio theory solve?"
+    relevant_chunk: markowitz
+
+  - text: "How do KKT conditions verify a convex quadratic program?"
+    relevant_chunk: kkt_qp
+
+  - text: "Why does long-context inference need KV cache compression?"
+    relevant_chunk: kv_cache
+
+  - text: "How is recall used to evaluate compressed vector search?"
+    relevant_chunk: vector_search
+
+  - text: "What is uniform scalar quantization of embedding coordinates?"
+    relevant_chunk: scalar_quant

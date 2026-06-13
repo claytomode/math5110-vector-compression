@@ -1,9 +1,24 @@
-# Token vocabulary for embedding compression demo (GloVe 50d).
-# Mix of function words, verbs, nouns, and classic analogy pairs.
+# Token strings embedded via OpenAI API (cached to parquet after first run).
 
-glove_url: "https://nlp.stanford.edu/data/glove.6B.zip"
-glove_dim: 50
-max_glove_scan_lines: 500000
+# provider: openai | azure
+embeddings:
+  provider: azure
+  model: text-embedding-3-small
+  azure_deployment: text-embedding-3-small
+  dimensions: 256
+  batch_size: 128
+
+# RAG: source = yaml (demo corpus) | canvas (course PDFs via API)
+rag:
+  enabled: true
+  source: canvas
+  corpus_file: rag_corpus.yaml
+  queries_file: rag_queries.yaml
+  recall_k: 3
+  chunk_chars: 900
+  chunk_overlap: 120
+  canvas:
+    course_id: null
 
 tokens:
   - the
@@ -243,6 +258,6 @@ recall_k: 10
 random_seed: 5110
 
 compression:
-  jl_dims: [8, 12, 16, 24, 32]
-  rank_k: [4, 8, 12, 16]
+  jl_dims: [16, 32, 64, 128]
+  rank_k: [8, 16, 32, 64]
   scalar_bits: [2, 4, 8]

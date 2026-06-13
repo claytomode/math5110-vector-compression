@@ -1,0 +1,131 @@
+# Mini RAG knowledge base for retrieval-under-compression demo.
+# Each query has one gold chunk id (hit@k evaluation).
+
+chunks:
+  - id: jl_lemma
+    text: >
+      The Johnson-Lindenstrauss lemma says that high-dimensional point sets can be
+      mapped to a much lower dimension while approximately preserving pairwise
+      distances. A common construction uses a random Gaussian matrix R with
+      entries scaled by 1/sqrt(k), forming sketches y = R x.
+
+  - id: turboquant
+    text: >
+      TurboQuant is a recent vector compression pipeline for LLM key-value caches and
+      vector search. It combines structured polar or spectral compression with a
+      one-bit Johnson-Lindenstrauss residual stage to reduce memory with low distortion.
+
+  - id: sign_quant
+    text: >
+      Sign quantization stores only the sign of each coordinate in a vector. For
+      inner-product scoring, a full-precision query can be combined with sign-compressed
+      keys using a norm-based estimator. This is related to quantized JL methods.
+
+  - id: rank_k_svd
+    text: >
+      Rank-k truncation approximates a matrix of vectors by keeping the top k singular
+      directions from an SVD. Each vector is reconstructed in a k-dimensional subspace,
+      capturing shared geometry similar to spectral compression methods.
+
+  - id: rag_overview
+    text: >
+      Retrieval-augmented generation (RAG) embeds document chunks into a vector index.
+      At query time the system embeds the user question, retrieves nearest chunks by
+      cosine similarity or inner product, and passes them as context to a language model.
+
+  - id: rag_compression
+    text: >
+      Compressing RAG chunk embeddings reduces index memory and speeds up search, but
+      aggressive quantization can retrieve the wrong passages. Evaluating hit@k on
+      labeled queries measures whether compression breaks retrieval.
+
+  - id: psd_covariance
+    text: >
+      A covariance matrix is positive semidefinite when all eigenvalues are nonnegative.
+      PSD matrices define valid convex quadratic risk terms and arise naturally from
+      sample second-moment matrices in multivariate data.
+
+  - id: markowitz
+    text: >
+      Markowitz mean-variance optimization trades expected return against portfolio
+      variance under linear constraints. The long-only version is a convex quadratic
+      program whose optimality conditions can be expressed with KKT multipliers.
+
+  - id: kkt_qp
+    text: >
+      For convex QPs with inequality constraints, Karush-Kuhn-Tucker conditions link
+      primal feasibility, dual feasibility, stationarity, and complementary slackness.
+      Numerical solvers such as OSQP can be checked against these residuals.
+
+  - id: kv_cache
+    text: >
+      Transformer inference stores per-token key and value vectors in a KV cache.
+      Long contexts make this cache large because each position contributes a
+      high-dimensional key vector that participates in attention scoring.
+
+  - id: vector_search
+    text: >
+      Vector search finds nearest neighbors in a database of embeddings under cosine
+      similarity or inner product. Distortion from compression directly affects recall
+      of the true nearest items at query time.
+
+  - id: scalar_quant
+    text: >
+      Uniform scalar quantization maps each coordinate into a finite number of bins.
+      It gives direct control of bits per dimension but introduces reconstruction error
+      that can harm nearest-neighbor geometry.
+
+  - id: eigenvalues
+    text: >
+      Eigenvalues measure variance along orthogonal principal directions of a matrix.
+      The condition number, ratio of largest to smallest eigenvalue, indicates how
+      ill-conditioned a quadratic form or linear system may be.
+
+  - id: azure_embeddings
+    text: >
+      Azure OpenAI and AI Foundry expose embedding deployments that map text strings
+      to dense vectors. These vectors can back semantic search and RAG indexes in
+      cloud applications with enterprise billing.
+
+  - id: token_embeddings
+    text: >
+      Token and word embeddings represent discrete text units as points in R^d.
+      Similar meanings tend to map to nearby vectors, which is why compression must
+      preserve neighborhood structure for search and RAG to keep working.
+
+queries:
+  - text: "How does Johnson-Lindenstrauss reduce dimension while keeping distances?"
+    relevant_chunk: jl_lemma
+
+  - text: "What is TurboQuant used for in LLM systems?"
+    relevant_chunk: turboquant
+
+  - text: "How do you score vectors after 1-bit sign compression?"
+    relevant_chunk: sign_quant
+
+  - text: "Explain rank-k SVD compression for a matrix of embeddings."
+    relevant_chunk: rank_k_svd
+
+  - text: "What are the steps in a basic RAG pipeline?"
+    relevant_chunk: rag_overview
+
+  - text: "Why might compressed embeddings break document retrieval?"
+    relevant_chunk: rag_compression
+
+  - text: "When is a covariance matrix valid for a quadratic risk term?"
+    relevant_chunk: psd_covariance
+
+  - text: "What optimization problem does Markowitz portfolio theory solve?"
+    relevant_chunk: markowitz
+
+  - text: "How do KKT conditions verify a convex quadratic program?"
+    relevant_chunk: kkt_qp
+
+  - text: "Why does long-context inference need KV cache compression?"
+    relevant_chunk: kv_cache
+
+  - text: "How is recall used to evaluate compressed vector search?"
+    relevant_chunk: vector_search
+
+  - text: "What is uniform scalar quantization of embedding coordinates?"
+    relevant_chunk: scalar_quant

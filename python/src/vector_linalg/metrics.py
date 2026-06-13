@@ -55,6 +55,54 @@ def recall_at_k(
     return hits / len(query_indices)
 
 
+def rag_hit_at_k(
+    chunk_keys: np.ndarray,
+    queries: np.ndarray,
+    gold_indices: list[int],
+    *,
+    k: int,
+    score_fn,
+) -> float:
+    """Fraction of queries whose labeled gold chunk appears in top-k."""
+    hits = 0.0
+    for i, q in enumerate(queries):
+        scores = score_fn(i, q)
+        top = set(np.argsort(-scores)[:k].tolist())
+        hits += 1.0 if gold_indices[i] in top else 0.0
+    return hits / len(queries)
+
+
+def evaluate_rag_method(
+    keys: np.ndarray,
+    compressed: CompressedVectors,
+    queries: np.ndarray,
+    gold_indices: list[int],
+    *,
+    pairs: np.ndarray,
+    recall_k: int,
+    full_bits: float = 32.0,
+) -> MethodResult:
+    if compressed.metadata["method"] == "sign_quantization":
+        signs = compressed.keys.astype(np.float64)
+        norms = compressed.metadata["norms"]
+        recon = signs * norms[:, None] / np.sqrt(keys.shape[1])
+    else:
+        recon = compressed.keys
+
+    def score_fn(_qi: int, q: np.ndarray) -> np.ndarray:
+        return scores_from_compressed(keys, q, compressed)
+
+    return MethodResult(
+        method=compressed.name,
+        bits_per_dim=compressed.bits_per_dim,
+        mean_distance_rel_error=distance_distortion(keys, recon, pairs),
+        recall_at_k=rag_hit_at_k(
+            keys, queries, gold_indices, k=recall_k, score_fn=score_fn
+        ),
+        compression_ratio=full_bits / max(compressed.bits_per_dim, 1e-9),
+    )
+
+
 def evaluate_method(
     keys: np.ndarray,
     compressed: CompressedVectors,
