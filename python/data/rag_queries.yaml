@@ -1,40 +1,40 @@
-# Labeled queries for RAG hit@k evaluation.
-# When using Canvas PDFs, run: uv run python scripts/list_rag_chunks.py
-# then set relevant_chunk to a chunk id from the manifest.
+# Labeled queries for RAG hit@k on the MATH 5110 GitHub book corpus.
+# Chunk ids from wanghemath/Book-AdvancedLinearAlgebraAI (chapter-*.qmd).
+# Refresh embeddings after editing: uv run python scripts/run_all.py
 
 queries:
-  - text: "How does Johnson-Lindenstrauss reduce dimension while keeping distances?"
-    relevant_chunk: jl_lemma
+  - text: "What is the singular value decomposition of a matrix?"
+    relevant_chunk: chapter-14-singular-value-decomposition_c010
 
-  - text: "What is TurboQuant used for in LLM systems?"
-    relevant_chunk: turboquant
+  - text: "What is the spectral theorem for symmetric matrices?"
+    relevant_chunk: chapter-13-symmetric-hermitian-matrices_c019
 
-  - text: "How do you score vectors after 1-bit sign compression?"
-    relevant_chunk: sign_quant
+  - text: "What is the Perron-Frobenius theorem?"
+    relevant_chunk: chapter-09-dynamical-systems-markov-chains-perron-frobenius_c020
 
-  - text: "Explain rank-k SVD compression for a matrix of embeddings."
-    relevant_chunk: rank_k_svd
+  - text: "What are the normal equations in least squares?"
+    relevant_chunk: chapter-12-least-squares-data-fitting_c015
 
-  - text: "What are the steps in a basic RAG pipeline?"
-    relevant_chunk: rag_overview
+  - text: "How do eigenvalues and diagonalization work?"
+    relevant_chunk: chapter-07-diagonalization-eigenvalues_c051
 
-  - text: "Why might compressed embeddings break document retrieval?"
-    relevant_chunk: rag_compression
+  - text: "What is the rank-nullity theorem for matrices?"
+    relevant_chunk: chapter-04-bases-dimension-rank-nullity_c024
 
-  - text: "When is a covariance matrix valid for a quadratic risk term?"
-    relevant_chunk: psd_covariance
+  - text: "What is a Markov chain in linear algebra?"
+    relevant_chunk: chapter-09-dynamical-systems-markov-chains-perron-frobenius_c011
 
-  - text: "What optimization problem does Markowitz portfolio theory solve?"
-    relevant_chunk: markowitz
+  - text: "How do Gram determinants relate to volume?"
+    relevant_chunk: chapter-06-determinants_c020
 
-  - text: "How do KKT conditions verify a convex quadratic program?"
-    relevant_chunk: kkt_qp
+  - text: "What is the QR factorization theorem?"
+    relevant_chunk: chapter-10-inner-products-projections-qr-adjoints_c021
 
-  - text: "Why does long-context inference need KV cache compression?"
-    relevant_chunk: kv_cache
+  - text: "How do you interpret SVD geometrically?"
+    relevant_chunk: chapter-14-singular-value-decomposition_c011
 
-  - text: "How is recall used to evaluate compressed vector search?"
-    relevant_chunk: vector_search
+  - text: "When is the kernel of a matrix a subspace?"
+    relevant_chunk: chapter-03-linear-spaces-subspaces-maps_c010
 
-  - text: "What is uniform scalar quantization of embedding coordinates?"
-    relevant_chunk: scalar_quant
+  - text: "How does least squares relate to orthogonal projection?"
+    relevant_chunk: chapter-10-inner-products-projections-qr-adjoints_c024

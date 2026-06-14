@@ -96,8 +96,17 @@ uv run python scripts/run_all.py
 | Path | Purpose |
 |------|---------|
 | `python/src/vector_linalg/` | Embeddings, compression, metrics, plots |
+| `backend/` | FastAPI search API (`uv sync --directory backend`) |
+| `frontend/` | SvelteKit UI (`bun install` in `frontend/`) |
 | `scripts/run_all.py` | End-to-end pipeline |
 | `docs/SURVEY.md` | Part 1 theory narrative |
+| `docs/SLIDES.md` | Presentation outline (copy to slides) |
+
+## Demo path (presentation)
+
+1. **Part A & B — notebook:** `python/notebooks/application.ipynb` (token compression + RAG hit@k table)
+2. **Part C — web UI:** from repo root after `uv sync --directory backend` and `bun run dev`, open http://localhost:5173
+3. **Slides:** `docs/SLIDES.md` + figures in `python/figures/`
 
 ## Data citation
 
