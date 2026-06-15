@@ -87,9 +87,11 @@ From the [TurboQuant blog](https://research.google.blog/turboquant-redefining-ai
 2. **Stage 1:** scalar quant in rotated space (`turboquant_2bit` … `turboquant_8bit`)
 3. **Stage 2:** 1-bit **QJL** on residual + **full-precision query** at score time
 
-$$
+
+```math
 q^\top x \approx q^\top \hat{x}_{\text{stage1}} + \|r\|\,\frac{\mathrm{sign}(r)^\top q}{\sqrt{d}}
-$$
+```
+
 
 **Sizes we benchmark:** `turboquant_2bit`, `_3bit`, `_4bit`, `_8bit`
 

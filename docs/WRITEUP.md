@@ -48,18 +48,24 @@ Throughout, vectors live in $\mathbb{R}^d$. Retrieval scores a **query** $q$ aga
 ### 2.1 Johnson–Lindenstrauss (JL) random projection
 
 **Lemma (informal).** For $n$ points in $\mathbb{R}^d$ and distortion tolerance $\varepsilon > 0$, there exists a linear map $R \in \mathbb{R}^{k \times d}$ with
-$$
+
+```math
 k = O\!\left(\varepsilon^{-2} \log n\right)
-$$
+```
+
 such that for all pairs $u, v$ in the set,
-$$
+
+```math
 (1-\varepsilon)\,\|u-v\|^2 \;\le\; \|Ru - Rv\|^2 \;\le\; (1+\varepsilon)\,\|u-v\|^2.
-$$
+```
+
 
 **Construction we use.** Gaussian random matrix with entries $\mathcal{N}(0, 1/k)$. Sketch each key:
-$$
+
+```math
 y = Rx \in \mathbb{R}^k.
-$$
+```
+
 Store sketched keys and the same matrix $R$ so queries project as $Rq$. Search in the lower-dimensional sketched space.
 
 **Linear-algebra view.** $R$ is a random linear operator; its singular values concentrate near 1 when $k$ is large enough (Johnson–Lindenstrauss, 1984; constructive proofs via subgaussian rows, e.g. Dasgupta & Gupta, 2003).
@@ -69,9 +75,11 @@ Store sketched keys and the same matrix $R$ so queries project as $Rq$. Search i
 ### 2.2 Spectral / rank-$k$ truncation (PolarQuant analogy)
 
 Stack $n$ key vectors as rows of $X \in \mathbb{R}^{n \times d}$. The thin SVD is
-$$
+
+```math
 X = U \Sigma V^\top, \qquad X \approx U_k \Sigma_k V_k^\top
-$$
+```
+
 where $U_k \Sigma_k V_k^\top$ keeps the top $k$ singular directions.
 
 **Interpretation.** Dominant right singular vectors $V_k$ capture shared structure across the corpus (a low-dimensional “signal subspace”). Each vector is replaced by its projection onto $\mathrm{span}(V_k)$.
@@ -85,18 +93,22 @@ where $U_k \Sigma_k V_k^\top$ keeps the top $k$ singular directions.
 Store one bit per coordinate: $\mathrm{sign}(x_j) \in \{+1,-1\}$, plus the vector norm $\|x\|$.
 
 For a **full-precision query** $q$, a standard inner-product estimator is
-$$
+
+```math
 \widehat{q^\top k} \;\approx\; \|k\| \cdot \frac{\mathrm{sign}(k)^\top q}{\sqrt{d}}.
-$$
+```
+
 
 **Use case.** Extreme compression for dot-product scoring (attention keys, MIPS). **Quantized Johnson–Lindenstrauss (QJL)** (Zandieh et al., AAAI 2025) applies 1-bit quantization to **residuals** after a first compression stage — the key idea behind TurboQuant’s second pass.
 
 ### 2.4 Uniform scalar quantization
 
 Per coordinate $x_j$, map the corpus-wide range $[a_j, b_j]$ to $2^b$ uniform levels:
-$$
+
+```math
 \hat{x}_j = a_j + \frac{\mathrm{round}\bigl((x_j - a_j)/(b_j-a_j) \cdot (2^b-1)\bigr)}{2^b-1}(b_j - a_j).
-$$
+```
+
 
 **Properties.** Simple, direct control of **bits per dimension** ($b$). Error is biased and coordinate-aligned — without rotation, “important” directions aligned with axes can be clipped badly. This makes scalar quantization a **strong, honest baseline** at moderate bit budgets (4–8 bits).
 
@@ -133,9 +145,11 @@ TurboQuant applies a random orthogonal transform so coordinates are **exchangeab
 - random permutation $\pi$ of coordinates,
 - random Rademacher signs $\sigma_j \in \{\pm 1\}$,
 
-$$
+
+```math
 \tilde{x} = (x_{\pi(1)}\sigma_1,\; \ldots,\; x_{\pi(d)}\sigma_d).
-$$
+```
+
 
 Metadata cost is $O(d)$ (permutation + signs), not $O(d^2)$ for a dense orthogonal matrix.
 
@@ -145,13 +159,17 @@ In rotated space, per-dimension min/max ranges $[\ell_j, h_j]$ define uniform $2
 
 ### 3.3 Stage 2: QJL residual
 
-$$
+
+```math
 r = x - \hat{x}_1, \qquad \hat{x} = \hat{x}_1 + \frac{\|r\|}{\sqrt{d}}\,\mathrm{sign}(r)
-$$
+```
+
 for reconstruction; scoring uses the **unquantized dot-product estimator** on the residual:
-$$
+
+```math
 \hat{s}(q, x) = \hat{x}_1^\top q + \frac{\|r\|}{\sqrt{d}}\,\mathrm{sign}(r)^\top q.
-$$
+```
+
 
 **Why this helps.** Stage-1 scalar quant introduces **biased, correlated** error. The residual often still carries directional information aligned with the query. A 1-bit JL-style residual term adds an unbiased correction — this is TurboQuant’s main insight over plain scalar quantization at aggressive bit budgets.
 

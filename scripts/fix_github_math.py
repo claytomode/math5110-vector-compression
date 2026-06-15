@@ -1,7 +1,8 @@
-"""Convert LaTeX math delimiters to GitHub $ / $$ syntax."""
+"""Convert LaTeX math delimiters to GitHub $ / ```math syntax."""
 
 from __future__ import annotations
 
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -11,11 +12,23 @@ DOCS = ROOT / "docs"
 DOLLAR = chr(36)
 DISPLAY = DOLLAR * 2
 
+_DISPLAY_BLOCK = re.compile(r"\n\$\$\n(.*?)\n\$\$(?=\n|$)", re.DOTALL)
+
 
 def convert_math(text: str) -> str:
     text = text.replace("\\[", DISPLAY).replace("\\]", DISPLAY)
     text = text.replace("\\(", DOLLAR).replace("\\)", DOLLAR)
     return text
+
+
+def display_to_math_blocks(text: str) -> str:
+    """GitHub renders ```math blocks more reliably than bare $$ delimiters."""
+
+    def repl(match: re.Match[str]) -> str:
+        body = match.group(1).strip("\n")
+        return f"\n\n```math\n{body}\n```\n"
+
+    return _DISPLAY_BLOCK.sub(repl, text)
 
 
 def fix_table_pipes(text: str) -> str:
@@ -28,7 +41,12 @@ def fix_table_pipes(text: str) -> str:
     )
 
 
+def process(text: str) -> str:
+    return display_to_math_blocks(fix_table_pipes(convert_math(text)))
+
+
 def main() -> None:
+    blocks_only = "--blocks-only" in sys.argv
     rev = "8f3dc42" if "--from-git" in sys.argv else None
     for path in sorted(DOCS.glob("*.md")):
         if rev:
@@ -41,7 +59,11 @@ def main() -> None:
             )
         else:
             raw = path.read_text(encoding="utf-8")
-        path.write_text(fix_table_pipes(convert_math(raw)), encoding="utf-8")
+        if blocks_only:
+            out = display_to_math_blocks(raw)
+        else:
+            out = process(raw)
+        path.write_text(out, encoding="utf-8")
         print(f"updated {path.name}")
 
 

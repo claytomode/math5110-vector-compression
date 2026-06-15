@@ -33,9 +33,11 @@ This project surveys those ideas and applies simplified versions to **OpenAI tok
 
 Write a matrix of embedding vectors $X \in \mathbb{R}^{n \times d}$. SVD:
 
-$$
+
+```math
 X \approx U_k \Sigma_k V_k^\top
-$$
+```
+
 
 Keep top‑$k$ right singular vectors $V_k$: each row is reconstructed in a **$k$-dimensional subspace**.
 
@@ -47,9 +49,11 @@ Keep top‑$k$ right singular vectors $V_k$: each row is reconstructed in a **$k
 
 Store only $\mathrm{sign}(x_i) \in \{+1,-1\}$ per coordinate. For query $q$ (full precision), score keys with:
 
-$$
+
+```math
 \hat{q}^\top k \approx \|k\| \cdot \frac{\mathrm{sign}(k)^\top q}{\sqrt{d}}
-$$
+```
+
 
 **Use case:** Extreme compression for inner-product / attention-style scoring. TurboQuant uses a 1-bit JL stage on residuals.
 
