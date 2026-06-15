@@ -51,7 +51,7 @@ MATH 5110 applied linear algebra · `claytomode/math5110-vector-compression`
 | **KV cache** (TurboQuant) | Attention **keys** | Model **memory** |
 | Embedding tables | Token vectors | Lookup table |
 
-Storage \(\propto n \cdot d \cdot\) bits per dimension.
+Storage $\propto n \cdot d \cdot$ bits per dimension.
 
 **Motivation:** [TurboQuant — Google Research (2026)](https://research.google.blog/turboquant-redefining-ai-efficiency-with-extreme-compression/)
 
@@ -63,7 +63,7 @@ Storage \(\propto n \cdot d \cdot\) bits per dimension.
 |------|-------------|
 | **A. Survey** | JL, rank-k SVD, sign, scalar, TurboQuant (rotate → quant → QJL residual) |
 | **B. Metrics** | Recall@k, distance distortion, **overlap@k vs full** (set overlap, rank-blind) |
-| **C. Token study** | 230 words, \(d=256\), recall@10 |
+| **C. Token study** | 230 words, $d=256$, recall@10 |
 | **D. Book RAG** | 1380 chunks, **300 stratified queries**, overlap@3 |
 | **E. Demo** | FastAPI + Svelte search UI |
 
@@ -71,7 +71,7 @@ Storage \(\propto n \cdot d \cdot\) bits per dimension.
 
 ## Slide 5 — Johnson–Lindenstrauss
 
-Random \(R \in \mathbb{R}^{k \times d}\), sketch \(y = Rx\). Preserves **pairwise distances** with \(k = O(\log n / \varepsilon^2)\).
+Random $R \in \mathbb{R}^{k \times d}$, sketch $y = Rx$. Preserves **pairwise distances** with $k = O(\log n / \varepsilon^2)$.
 
 **Our `jl_k`:** compress keys **and** queries into sketched space.
 
@@ -83,13 +83,13 @@ Random \(R \in \mathbb{R}^{k \times d}\), sketch \(y = Rx\). Preserves **pairwis
 
 From the [TurboQuant blog](https://research.google.blog/turboquant-redefining-ai-efficiency-with-extreme-compression/):
 
-1. **Rotate** (perm + random signs) — flatten geometry, O(\(d\)) metadata
+1. **Rotate** (perm + random signs) — flatten geometry, O($d$) metadata
 2. **Stage 1:** scalar quant in rotated space (`turboquant_2bit` … `turboquant_8bit`)
 3. **Stage 2:** 1-bit **QJL** on residual + **full-precision query** at score time
 
-\[
+$$
 q^\top x \approx q^\top \hat{x}_{\text{stage1}} + \|r\|\,\frac{\mathrm{sign}(r)^\top q}{\sqrt{d}}
-\]
+
 
 **Sizes we benchmark:** `turboquant_2bit`, `_3bit`, `_4bit`, `_8bit`
 
@@ -107,7 +107,7 @@ q^\top x \approx q^\top \hat{x}_{\text{stage1}} + \|r\|\,\frac{\mathrm{sign}(r)^
 
 | Metric | Meaning |
 |--------|---------|
-| **Overlap@k** | \(\| \text{full top-}k \cap \text{compressed top-}k \| / k\) — **swaps still count** |
+| **Overlap@k** | $\| \text{full top-}k \cap \text{compressed top-}k \| / k$ — **swaps still count** |
 | **Ground truth** | Full-precision cosine top-k (not hand labels) |
 | **300 queries** | Section titles, stratified across 28 chapters |
 | **Drift report** | `rag_topk_drift.json` — which chunks drop out per method |
@@ -185,7 +185,7 @@ bun run dev    # UI http://localhost:5173 , API :8010
 - Johnson & Lindenstrauss (1984)
 - [TurboQuant blog — Google Research (2026)](https://research.google.blog/turboquant-redefining-ai-efficiency-with-extreme-compression/)
 - Wang, [*Book-AdvancedLinearAlgebraAI*](https://github.com/wanghemath/Book-AdvancedLinearAlgebraAI)
-- Azure / OpenAI `text-embedding-3-small` (\(d=256\))
+- Azure / OpenAI `text-embedding-3-small` ($d=256$)
 
 ---
 
