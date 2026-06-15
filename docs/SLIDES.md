@@ -1,6 +1,7 @@
 # MATH 5110 — Vector compression for embeddings & retrieval
 
 **Presentation deck** — copy into PowerPoint / Google Slides / Quarto reveal.  
+**Full math writeup (theory + results + figures):** [`WRITEUP.md`](WRITEUP.md)  
 **Regenerate all figures + numbers:** `uv run python scripts/run_all.py`  
 **Headline metrics (frozen):** `python/data/presentation_results.json`
 

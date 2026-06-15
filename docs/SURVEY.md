@@ -1,6 +1,7 @@
 # Part 1 — Survey: compressing high-dimensional vectors
 
-> Theory narrative for the course report. Application (token embeddings) is in `python/notebooks/application.ipynb`.
+> **Full writeup (theory → methods → results + figures):** [`WRITEUP.md`](WRITEUP.md)  
+> Application notebook: `python/notebooks/application.ipynb`
 
 ## Why this topic?
 
