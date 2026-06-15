@@ -2,9 +2,8 @@
   <p class="eyebrow">Compressed embedding retrieval</p>
   <h1>Search the course index</h1>
   <p class="lede">
-    Ask a question against the <strong>Advanced Linear Algebra</strong> book — symmetric matrices, SVD,
-    Perron–Frobenius, least squares, and more. Pick a compressed index or compare retrieval across
-    <code>full_precision</code>, <code>jl_128</code>, <code>sign_1bit</code>, and <code>scalar_8bit</code>.
+    Pick a compressed index or compare retrieval across TurboQuant, scalar quant, JL, and sign
+    compression on the same course chunks.
   </p>
 </header>
 

@@ -86,10 +86,12 @@ uv run python scripts/run_all.py
 
 - `python/data/token_embeddings.parquet`, `metadata.json`
 - `python/figures/*.png` (token embedding compression)
-- `python/figures/rag/*.png` (RAG hit@k vs compression, token vs RAG compare)
+- `python/figures/rag/*.png` (RAG frontier, value ranking, drift summary)
+- `python/data/presentation_results.json` (headline numbers for slides)
 
 **Notebook:** `python/notebooks/application.ipynb`  
-**Survey write-up:** `docs/SURVEY.md`
+**Survey write-up:** `docs/SURVEY.md`  
+**Slides (finalized):** `docs/SLIDES.md` — includes “why this project matters”, TurboQuant 2/3/4/8-bit table, demo checklist
 
 ## Repo layout
 
@@ -104,9 +106,12 @@ uv run python scripts/run_all.py
 
 ## Demo path (presentation)
 
-1. **Part A & B — notebook:** `python/notebooks/application.ipynb` (token compression + RAG hit@k table)
-2. **Part C — web UI:** from repo root after `uv sync --directory backend` and `bun run dev`, open http://localhost:5173
-3. **Slides:** `docs/SLIDES.md` + figures in `python/figures/`
+1. **Regenerate data:** `uv run python scripts/run_all.py` → figures + `presentation_results.json`
+2. **Notebook:** `python/notebooks/application.ipynb` (token + RAG tables)
+3. **Web UI:** `bun run dev` → http://localhost:5173 (compare `turboquant_4bit`, `sign_1bit`, `scalar_8bit`)
+4. **Slides:** `docs/SLIDES.md` + `python/figures/rag/rag_compression_frontier.png`
+
+**Headline RAG result:** `turboquant_2bit` → **76%** top-3 overlap at **10×** compression vs scalar 2-bit **63%** — shows why TurboQuant’s QJL residual stage exists.
 
 ## Data citation
 

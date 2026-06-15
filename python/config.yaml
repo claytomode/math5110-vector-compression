@@ -17,6 +17,11 @@ rag:
   recall_k: 3
   chunk_chars: 900
   chunk_overlap: 120
+  eval:
+    auto_n_queries: 300
+    auto_seed: 5110
+    auto_query_style: section_title
+    use_labeled_queries: false
   github_book:
     owner: wanghemath
     repo: Book-AdvancedLinearAlgebraAI
@@ -265,4 +270,5 @@ random_seed: 5110
 compression:
   jl_dims: [16, 32, 64, 128]
   rank_k: [8, 16, 32, 64]
-  scalar_bits: [2, 4, 8]
+  scalar_bits: [2, 3, 4, 8]
+  turboquant_stage_bits: [2, 3, 4, 8]

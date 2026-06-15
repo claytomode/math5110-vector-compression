@@ -13,6 +13,7 @@ class CompressionSweep:
     jl_dims: tuple[int, ...]
     rank_k: tuple[int, ...]
     scalar_bits: tuple[int, ...]
+    turboquant_stage_bits: tuple[int, ...]
 
 
 @dataclass(frozen=True)
@@ -39,6 +40,14 @@ class GithubBookConfig:
 
 
 @dataclass(frozen=True)
+class RagEvalConfig:
+    auto_n_queries: int
+    auto_seed: int
+    auto_query_style: str
+    use_labeled_queries: bool
+
+
+@dataclass(frozen=True)
 class RagConfig:
     enabled: bool
     source: str
@@ -49,6 +58,7 @@ class RagConfig:
     chunk_overlap: int
     canvas: CanvasConfig
     github_book: GithubBookConfig
+    eval: RagEvalConfig
 
 
 @dataclass(frozen=True)
@@ -76,6 +86,18 @@ class ProjectConfig:
     @property
     def rag_queries_cache(self) -> Path:
         return self.data_dir / "rag_query_embeddings.parquet"
+
+    @property
+    def rag_auto_queries_cache(self) -> Path:
+        return self.data_dir / "rag_auto_query_embeddings.parquet"
+
+    @property
+    def rag_eval_manifest_path(self) -> Path:
+        return self.data_dir / "rag_eval_manifest.json"
+
+    @property
+    def rag_drift_report_path(self) -> Path:
+        return self.data_dir / "rag_topk_drift.json"
 
     @property
     def metadata_path(self) -> Path:
@@ -130,6 +152,7 @@ def load_config(path: Path | None = None) -> ProjectConfig:
     rag = raw.get("rag", {})
     canvas = rag.get("canvas", {})
     book = rag.get("github_book", {})
+    ev = rag.get("eval", {})
     return ProjectConfig(
         repo_root=root,
         data_dir=root / "python" / "data",
@@ -160,6 +183,12 @@ def load_config(path: Path | None = None) -> ProjectConfig:
                 branch=book.get("branch", "main"),
                 chapters_dir=book.get("chapters_dir", "chapters"),
             ),
+            eval=RagEvalConfig(
+                auto_n_queries=int(ev.get("auto_n_queries", 300)),
+                auto_seed=int(ev.get("auto_seed", 5110)),
+                auto_query_style=ev.get("auto_query_style", "section_title"),
+                use_labeled_queries=bool(ev.get("use_labeled_queries", False)),
+            ),
         ),
         n_query_tokens=int(raw.get("n_query_tokens", 80)),
         n_distance_pairs=int(raw.get("n_distance_pairs", 2000)),
@@ -169,5 +198,6 @@ def load_config(path: Path | None = None) -> ProjectConfig:
             jl_dims=tuple(comp.get("jl_dims", [8, 16, 32])),
             rank_k=tuple(comp.get("rank_k", [4, 8, 16])),
             scalar_bits=tuple(comp.get("scalar_bits", [2, 4, 8])),
+            turboquant_stage_bits=tuple(comp.get("turboquant_stage_bits", [2, 3, 4, 8])),
         ),
     )

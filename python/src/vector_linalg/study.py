@@ -9,6 +9,7 @@ from vector_linalg.compression import (
     compress_rank_k,
     compress_scalar,
     compress_sign,
+    compress_turboquant,
 )
 from vector_linalg.config import ProjectConfig
 from vector_linalg.metrics import MethodResult, build_jl_compressed, evaluate_method
@@ -44,6 +45,9 @@ def run_compression_study(
 
     for bits in cfg.compression.scalar_bits:
         compressed_list.append(compress_scalar(keys, bits))
+
+    for bits in cfg.compression.turboquant_stage_bits:
+        compressed_list.append(compress_turboquant(keys, bits, rng))
 
     results: list[MethodResult] = []
     for comp in compressed_list:

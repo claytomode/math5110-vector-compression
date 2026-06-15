@@ -13,7 +13,19 @@ from vector_linalg.rag import (
     storage_report,
 )
 
-COMPARE_METHODS = ("full_precision", "jl_128", "sign_1bit", "scalar_8bit")
+_COMPARE_METHODS = (
+    "full_precision",
+    "turboquant_2bit",
+    "turboquant_3bit",
+    "turboquant_4bit",
+    "turboquant_8bit",
+    "scalar_2bit",
+    "scalar_3bit",
+    "scalar_4bit",
+    "scalar_8bit",
+    "jl_128",
+    "sign_1bit",
+)
 
 
 def _repo_root() -> Path:
@@ -30,4 +42,4 @@ def get_corpus_state() -> tuple[ProjectConfig, RagBundle, list[str], list[dict]]
 
 
 def compare_methods(available: list[str]) -> list[str]:
-    return [m for m in COMPARE_METHODS if m in available]
+    return [m for m in _COMPARE_METHODS if m in available]

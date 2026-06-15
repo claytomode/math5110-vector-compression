@@ -54,6 +54,10 @@ export function methodLabel(method: string): string {
   if (labels[method]) return labels[method];
   if (method.startsWith("jl_")) return `JL → ${method.split("_")[1]}d`;
   if (method.startsWith("rank_")) return `Rank-${method.split("_")[1]} SVD`;
+  if (method.startsWith("turboquant_")) {
+    const bits = method.replace("turboquant_", "").replace("bit", "");
+    return `TurboQuant ${bits}-bit`;
+  }
   if (method.startsWith("scalar_")) return `Scalar ${method.split("_")[1]}`;
   return method;
 }

@@ -7,7 +7,7 @@ from dataclasses import dataclass
 import numpy as np
 import polars as pl
 
-from vector_linalg.compression import CompressedVectors, compress_jl, cosine_scores, scores_from_compressed
+from vector_linalg.compression import CompressedVectors, compress_jl, cosine_scores, reconstruct_vectors, scores_from_compressed
 
 
 @dataclass(frozen=True)
@@ -55,50 +55,61 @@ def recall_at_k(
     return hits / len(query_indices)
 
 
-def rag_hit_at_k(
+def rag_recall_vs_full_at_k(
     chunk_keys: np.ndarray,
     queries: np.ndarray,
-    gold_indices: list[int],
     *,
     k: int,
     score_fn,
 ) -> float:
-    """Fraction of queries whose labeled gold chunk appears in top-k."""
-    hits = 0.0
+    """Overlap between compressed top-k and full-precision cosine top-k (full = truth)."""
+    if len(queries) == 0:
+        return 0.0
+    overlap = 0.0
     for i, q in enumerate(queries):
-        scores = score_fn(i, q)
-        top = set(np.argsort(-scores)[:k].tolist())
-        hits += 1.0 if gold_indices[i] in top else 0.0
-    return hits / len(queries)
+        true_scores = cosine_scores(chunk_keys, q)
+        true_top = set(np.argsort(-true_scores)[:k].tolist())
+        approx_scores = score_fn(i, q)
+        approx_top = set(np.argsort(-approx_scores)[:k].tolist())
+        overlap += len(true_top & approx_top) / k
+    return overlap / len(queries)
+
+
+def full_precision_top_k(
+    chunk_keys: np.ndarray,
+    query: np.ndarray,
+    *,
+    k: int,
+) -> list[int]:
+    scores = cosine_scores(chunk_keys, query)
+    return np.argsort(-scores)[:k].tolist()
 
 
 def evaluate_rag_method(
     keys: np.ndarray,
     compressed: CompressedVectors,
-    queries: np.ndarray,
-    gold_indices: list[int],
+    auto_queries: np.ndarray,
     *,
     pairs: np.ndarray,
     recall_k: int,
     full_bits: float = 32.0,
 ) -> MethodResult:
-    if compressed.metadata["method"] == "sign_quantization":
-        signs = compressed.keys.astype(np.float64)
-        norms = compressed.metadata["norms"]
-        recon = signs * norms[:, None] / np.sqrt(keys.shape[1])
-    else:
-        recon = compressed.keys
+    recon = reconstruct_vectors(keys, compressed)
 
     def score_fn(_qi: int, q: np.ndarray) -> np.ndarray:
         return scores_from_compressed(keys, q, compressed)
+
+    recall = (
+        rag_recall_vs_full_at_k(keys, auto_queries, k=recall_k, score_fn=score_fn)
+        if len(auto_queries) > 0
+        else 0.0
+    )
 
     return MethodResult(
         method=compressed.name,
         bits_per_dim=compressed.bits_per_dim,
         mean_distance_rel_error=distance_distortion(keys, recon, pairs),
-        recall_at_k=rag_hit_at_k(
-            keys, queries, gold_indices, k=recall_k, score_fn=score_fn
-        ),
+        recall_at_k=recall,
         compression_ratio=full_bits / max(compressed.bits_per_dim, 1e-9),
     )
 
@@ -112,14 +123,7 @@ def evaluate_method(
     recall_k: int,
     full_bits: float = 32.0,
 ) -> MethodResult:
-    if compressed.metadata["method"] == "johnson_lindenstrauss":
-        recon = compressed.keys
-    elif compressed.metadata["method"] == "sign_quantization":
-        signs = compressed.keys.astype(np.float64)
-        norms = compressed.metadata["norms"]
-        recon = signs * norms[:, None] / np.sqrt(keys.shape[1])
-    else:
-        recon = compressed.keys
+    recon = reconstruct_vectors(keys, compressed)
 
     def score_fn(_qi: int, q: np.ndarray) -> np.ndarray:
         return scores_from_compressed(keys, q, compressed)
@@ -149,15 +153,14 @@ def build_jl_compressed(
 
 def results_table(results: list[MethodResult], recall_k: int) -> pl.DataFrame:
     col = f"recall_at_{recall_k}"
-    return pl.DataFrame(
-        [
-            {
-                "method": r.method,
-                "bits_per_dim": r.bits_per_dim,
-                "compression_ratio": r.compression_ratio,
-                "mean_distance_rel_error": r.mean_distance_rel_error,
-                col: r.recall_at_k,
-            }
-            for r in results
-        ]
-    ).sort(col, descending=True)
+    rows = [
+        {
+            "method": r.method,
+            "bits_per_dim": r.bits_per_dim,
+            "compression_ratio": r.compression_ratio,
+            "mean_distance_rel_error": r.mean_distance_rel_error,
+            col: r.recall_at_k,
+        }
+        for r in results
+    ]
+    return pl.DataFrame(rows).sort(col, descending=True)

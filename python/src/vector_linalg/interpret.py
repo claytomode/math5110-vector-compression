@@ -32,8 +32,8 @@ def print_results(results: list[MethodResult], recall_k: int) -> None:
 
 
 def print_rag_results(results: list[MethodResult], hit_k: int) -> None:
-    print(f"=== RAG retrieval (hit@{hit_k} on labeled queries) ===")
-    col = f"hit_at_{hit_k}"
+    col = f"overlap_vs_full@{hit_k}"
+    print(f"=== RAG retrieval (top-{hit_k} overlap vs full-precision baseline) ===")
     rows = [
         {
             "method": r.method,

@@ -1,7 +1,8 @@
 # MATH 5110 — Vector compression for embeddings & retrieval
 
-Slide deck outline (copy into PowerPoint / Google Slides / Quarto reveal).
-Figures live in `python/figures/` after `uv run python scripts/run_all.py`.
+**Presentation deck** — copy into PowerPoint / Google Slides / Quarto reveal.  
+**Regenerate all figures + numbers:** `uv run python scripts/run_all.py`  
+**Headline metrics (frozen):** `python/data/presentation_results.json`
 
 ---
 
@@ -9,156 +10,206 @@ Figures live in `python/figures/` after `uv run python scripts/run_all.py`.
 
 **Vector compression for high-dimensional data**
 
-MATH 5110 applied linear algebra project
+MATH 5110 applied linear algebra · `claytomode/math5110-vector-compression`
 
-- Survey: JL, SVD rank‑k, sign & scalar quantization
-- Application: compressed retrieval over the course textbook
-
----
-
-## Slide 2 — Why vectors are expensive
-
-Modern AI stores **billions** of vectors:
-
-- Token embedding tables
-- Attention **keys** in the KV cache
-- RAG / search **indexes**
-
-Cost scales with dimension \(d\) and count \(n\): storage \(\propto n \cdot d \cdot \text{bits per dim}\).
-
-**Motivation:** [TurboQuant — Google Research (2026)](https://research.google/blog/turboquant-redefining-ai-efficiency-with-extreme-compression/)
+- Survey: JL, SVD, sign & scalar quant, **TurboQuant-style two-stage**
+- Application: compressed **textbook RAG** (300-query auto eval) + live search UI
 
 ---
 
-## Slide 3 — Project structure
+## Slide 2 — Why this project matters (not “just RAG”)
+
+**Question:** Billions of vectors (embeddings, KV-cache keys, search indexes) → can we shrink them without breaking geometry?
+
+**What we built:** A **reproducible lin-alg lab** that:
+
+1. Implements the same **maps** Google cites (JL, spectral, 1-bit signs, TurboQuant pipeline)
+2. Measures **honest retrieval** — 300 auto queries, full-precision top-3 = ground truth
+3. Ships a **live demo** — search Prof. Wang’s MATH 5110 book with compressed indexes
+
+**Why RAG here (not KV-cache):** Same dot-product math, but RAG = searchable index on **course material** you can demo in a browser. KV-cache = inside a running LLM (different stack, same compression ideas).
+
+**What we learned (real findings, not failure):**
+
+| Finding | Why it matters |
+|---------|----------------|
+| Raw JL **loses** top-k vs full precision | Theory (distances) ≠ engineering (ranking) |
+| Scalar is a **strong baseline** at 4–8 bits | Honest negative result — good science |
+| **TurboQuant beats scalar at aggressive bits** | 2-bit stage-1: **76%** overlap vs scalar 2-bit **63%** |
+| Two-stage **QJL residual** fixes biased quant | This is Google’s actual insight |
+
+> We didn’t reproduce Llama inference — we **tested the linear algebra** and showed **when** each method wins.
+
+---
+
+## Slide 3 — Where vectors live in AI
+
+| System | Vectors | Compress what? |
+|--------|---------|----------------|
+| **RAG** (our demo) | Chunk embeddings | Search **index** |
+| **KV cache** (TurboQuant) | Attention **keys** | Model **memory** |
+| Embedding tables | Token vectors | Lookup table |
+
+Storage \(\propto n \cdot d \cdot\) bits per dimension.
+
+**Motivation:** [TurboQuant — Google Research (2026)](https://research.google.blog/turboquant-redefining-ai-efficiency-with-extreme-compression/)
+
+---
+
+## Slide 4 — Project structure
 
 | Part | What we did |
 |------|-------------|
-| **1. Survey** | JL, spectral truncation, 1-bit signs, scalar quant |
-| **2. Computation** | NumPy + recall@k + distance distortion |
-| **3. Application** | Token embeddings + **book RAG** with compressed indexes |
-
-Repo: `claytomode/math5110-vector-compression`
+| **A. Survey** | JL, rank-k SVD, sign, scalar, TurboQuant (rotate → quant → QJL residual) |
+| **B. Metrics** | Recall@k, distance distortion, **overlap@k vs full** (set overlap, rank-blind) |
+| **C. Token study** | 230 words, \(d=256\), recall@10 |
+| **D. Book RAG** | 1380 chunks, **300 stratified queries**, overlap@3 |
+| **E. Demo** | FastAPI + Svelte search UI |
 
 ---
 
-## Slide 4 — Johnson–Lindenstrauss (informal lemma)
+## Slide 5 — Johnson–Lindenstrauss
 
-For \(n\) points in \(\mathbb{R}^d\), there is a linear map \(R \in \mathbb{R}^{k \times d}\) with
+Random \(R \in \mathbb{R}^{k \times d}\), sketch \(y = Rx\). Preserves **pairwise distances** with \(k = O(\log n / \varepsilon^2)\).
+
+**Our `jl_k`:** compress keys **and** queries into sketched space.
+
+**Result:** weak top-k on this corpus (`jl_128` → **39%** RAG overlap at 2×) — distance lemma ≠ retrieval ranking.
+
+---
+
+## Slide 6 — TurboQuant pipeline (our implementation)
+
+From the [TurboQuant blog](https://research.google.blog/turboquant-redefining-ai-efficiency-with-extreme-compression/):
+
+1. **Rotate** (perm + random signs) — flatten geometry, O(\(d\)) metadata
+2. **Stage 1:** scalar quant in rotated space (`turboquant_2bit` … `turboquant_8bit`)
+3. **Stage 2:** 1-bit **QJL** on residual + **full-precision query** at score time
 
 \[
-k = O\!\left(\frac{\log n}{\varepsilon^2}\right)
+q^\top x \approx q^\top \hat{x}_{\text{stage1}} + \|r\|\,\frac{\mathrm{sign}(r)^\top q}{\sqrt{d}}
 \]
 
-that preserves **all pairwise distances** up to \((1 \pm \varepsilon)\).
-
-**Construction we use:** Gaussian \(R_{ij} \sim \mathcal{N}(0, 1/k)\), sketch \(y = Rx\).
-
-**Lin alg:** random projections, approximate isometries, concentration.
+**Sizes we benchmark:** `turboquant_2bit`, `_3bit`, `_4bit`, `_8bit`
 
 ---
 
-## Slide 5 — JL in code & in TurboQuant
+## Slide 7 — Sign, scalar, rank-k
 
-**Our repo:** `compress_jl` — store sketched keys, project queries with same \(R\).
-
-**TurboQuant / QJL (2026):** after structured compression, apply a **1-bit JL stage** on the residual — signs only, zero metadata overhead, full-precision query at scoring time.
-
-Same linear-algebra story: **shrink vectors, preserve inner products / neighbors.**
+- **Sign 1-bit:** extreme compression (~28×), ~48% RAG overlap alone
+- **Scalar 2/4/8-bit:** strong baselines at moderate–high bits
+- **Rank-k SVD:** shared subspace; middling retrieval here
 
 ---
 
-## Slide 6 — Rank‑\(k\) / SVD truncation
-
-Matrix of embeddings \(X \in \mathbb{R}^{n \times d}\):
-
-\[
-X \approx U_k \Sigma_k V_k^\top
-\]
-
-Keep top‑\(k\) right singular vectors → each row lives in a **\(k\)-dimensional subspace**.
-
-**Polar intuition (TurboQuant’s PolarQuant):** radius + direction; shared basis across tokens/chunks.
-
-**Our method:** `compress_rank_k` — SVD basis + coefficients.
-
----
-
-## Slide 7 — Sign & scalar quantization
-
-**Sign (1-bit):** store \(\mathrm{sign}(x_i)\); score with full-precision query + norm correction.
-
-**Scalar:** uniform bins per coordinate (2 / 4 / 8 bits).
-
-Extreme compression for **dot-product retrieval** — same scoring pattern as QJL.
-
----
-
-## Slide 8 — What we measure
+## Slide 8 — Evaluation design
 
 | Metric | Meaning |
 |--------|---------|
-| **Recall@k** | True nearest neighbors still in top‑\(k\) after compression |
-| **Distance distortion** | Mean relative error on random pairs |
-| **RAG hit@k** | Gold book chunk in top‑\(k\) for labeled questions |
-| **bits/dim** | Storage budget |
-
-**Figure:** `python/figures/recall_vs_bits.png`
+| **Overlap@k** | \(\| \text{full top-}k \cap \text{compressed top-}k \| / k\) — **swaps still count** |
+| **Ground truth** | Full-precision cosine top-k (not hand labels) |
+| **300 queries** | Section titles, stratified across 28 chapters |
+| **Drift report** | `rag_topk_drift.json` — which chunks drop out per method |
 
 ---
 
-## Slide 9 — Token study (Part A)
+## Slide 9 — Token results (Part A)
 
-230 word embeddings, \(d=256\), `text-embedding-3-small`
+230 tokens · recall@10 · `text-embedding-3-small`
 
-- Toy nearest-neighbor universe (king/queen, matrix/vector, …)
-- Scalar 8-bit ≈ strong recall at 4× compression
+| Method | Overlap@10 | Compression |
+|--------|------------|-------------|
+| scalar_8bit | 99.7% | 4× |
+| turboquant_8bit | 99.7% | 3.4× |
+| turboquant_4bit | 97.2% | 5.9× |
+| scalar_4bit | 95.8% | 8× |
+| **turboquant_2bit** | **87.0%** | **9.3×** |
+| scalar_2bit | 82.5% | 16× |
+| jl_128 | 59.2% | 2× |
 
-**Figures:** `token_pca.png`, `distance_error.png`
-
----
-
-## Slide 10 — Book RAG (Part B)
-
-Index **[Advanced Linear Algebra AI](https://github.com/wanghemath/Book-AdvancedLinearAlgebraAI)** (~1380 chunks)
-
-1. Fetch `.qmd` chapters → chunk by `##` sections
-2. Embed chunks → build compressed indexes
-3. Evaluate **hit@3** on 12 labeled queries (`rag_queries.yaml`) — e.g. ~67% for full / sign / scalar on our run
-
-**Figures:** `python/figures/rag/rag_hit_vs_bits.png`, `token_vs_rag.png`
+**Figure:** `python/figures/token_compression_frontier.png`
 
 ---
 
-## Slide 11 — Index sizes (demo)
+## Slide 10 — RAG results (Part B) — headline table
 
-| Method | ~size (1380 × 256) |
-|--------|---------------------|
-| full_precision | ~1.4 MB |
-| jl_128 | ~700 KB |
-| sign_1bit | ~48 KB |
+1380 chunks · **300 queries** · overlap@3 vs full precision
 
-**Live UI:** `bun run dev` → http://localhost:5173 — search + compare indexes.
+| Method | Overlap@3 | Compression | Index size |
+|--------|-----------|-------------|------------|
+| turboquant_8bit | **99.8%** | 3.5× | 0.41 MB |
+| scalar_8bit | 99.7% | 4× | 0.36 MB |
+| turboquant_4bit | 93.3% | 6.2× | 0.24 MB |
+| scalar_4bit | 93.2% | 8× | 0.18 MB |
+| turboquant_3bit | 87.0% | 7.7× | 0.19 MB |
+| **turboquant_2bit** | **76.1%** | **10×** | **0.15 MB** |
+| scalar_2bit | 62.8% | 16× | 0.09 MB |
+| sign_1bit | 47.9% | 28× | 0.06 MB |
+| jl_128 | 39.2% | 2× | 0.84 MB |
+
+**Key slide point:** At **aggressive compression**, TurboQuant **beats scalar** — QJL residual pays off when stage-1 quant is harsh.
+
+**Figures:** `python/figures/rag/rag_compression_frontier.png`, `rag_value_ranking.png`, `rag_drift_summary.png`
 
 ---
 
-## Slide 12 — Demo path
+## Slide 11 — Pareto story (what to say)
 
-1. **Notebook** `application.ipynb` — Part A token plots, Part B RAG table
-2. **Web UI** — ask “spectral theorem for symmetric matrices”, compare `full_precision` vs `sign_1bit`
-3. **Takeaway:** compression trades bits for recall — sign/scalar often beat JL on this corpus
+**Moderate bits (4–8):** scalar ≈ TurboQuant (both ~93–100% overlap). Scalar wins on **pure compression ratio** (fewer metadata bits).
+
+**Aggressive bits (~3–4 effective):** **TurboQuant pulls ahead** — e.g. 2-bit stage-1 + QJL: **76%** vs scalar 2-bit **63%** at similar budget.
+
+**Extreme (sign only):** 28× but only 48% — TurboQuant’s recipe is how you fix that class of error **without** storing full vectors.
+
+**Raw JL:** not on the frontier — wrong tool for top-k here.
+
+---
+
+## Slide 12 — Live demo
+
+```bash
+bun run dev    # UI http://localhost:5173 , API :8010
+```
+
+1. Ask: *“What does the spectral theorem say about symmetric matrices?”*
+2. Compare indexes: `full_precision` · `turboquant_4bit` · `sign_1bit` · `scalar_8bit`
+3. Show index sizes in UI storage table
+
+**Notebook:** `python/notebooks/application.ipynb` (Parts A & B)
 
 ---
 
 ## Slide 13 — References
 
 - Johnson & Lindenstrauss (1984)
-- [TurboQuant blog — Google Research (2026)](https://research.google/blog/turboquant-redefining-ai-efficiency-with-extreme-compression/)
-- Wang, *Book-AdvancedLinearAlgebraAI* (MATH 5110 Quarto source)
-- OpenAI embeddings API (`text-embedding-3-small`)
+- [TurboQuant blog — Google Research (2026)](https://research.google.blog/turboquant-redefining-ai-efficiency-with-extreme-compression/)
+- Wang, [*Book-AdvancedLinearAlgebraAI*](https://github.com/wanghemath/Book-AdvancedLinearAlgebraAI)
+- Azure / OpenAI `text-embedding-3-small` (\(d=256\))
 
 ---
 
-## Speaker notes (1 min closing)
+## Speaker notes — 90 sec opening
 
-> We implemented classical **linear maps** that shrink embedding indexes and measured whether **geometry survives** — neighbors, distances, and textbook retrieval. TurboQuant shows the same ideas at LLM scale (KV cache + vector search). Our project is the **lin-alg lab version**: JL sketch, SVD subspace, 1-bit signs, on real course material you can search in the browser.
+> High-dimensional vectors are everywhere in AI — embeddings, search indexes, attention keys in the KV cache. Storage scales with dimension times bits per coordinate. We surveyed classical **linear maps** that shrink vectors: Johnson–Lindenstrauss random projections, SVD rank-k truncation, 1-bit sign quantization, and uniform scalar quant. We also implemented a **TurboQuant-style** pipeline from Google Research: rotate, quantize, then apply a 1-bit JL stage on the **residual** with a full-precision query at scoring time.
+>
+> We tested everything on two tasks: a token nearest-neighbor toy set and a **real RAG index** over the MATH 5110 textbook — 1380 chunks, **300 automatically generated queries**, with full-precision top-3 as ground truth. This isn’t a toy labeled set; it’s a large, reproducible benchmark.
+>
+> **Honest results:** raw JL does not win on retrieval ranking — distance guarantees aren’t enough. Scalar quantization is embarrassingly strong at 4–8 bits. But when we push compression hard, **TurboQuant beats plain scalar** — at 2-bit stage-1 we get **76%** overlap versus **63%** for scalar 2-bit. That’s exactly why the two-stage design exists.
+>
+> The live UI lets you search the book with compressed indexes. Same linear algebra Google uses for KV-cache compression — our project is the **understandable, demonstrable version** on course material.
+
+---
+
+## Speaker notes — 60 sec closing
+
+> Takeaway: compression is a **tradeoff curve**, not one winner. Implement the maps, measure retrieval, report when simple baselines win and when residual QJL earns its bits. RAG was the right lab bench for a searchable MATH 5110 project; TurboQuant at LLM scale is the industrial deployment of the same ideas. Questions?
+
+---
+
+## Pre-flight checklist
+
+- [ ] `uv run python scripts/run_all.py` (figures + `presentation_results.json`)
+- [ ] `.env` has Azure/OpenAI embedding keys
+- [ ] `bun run dev` — UI loads, search returns chunks
+- [ ] Figures open: `rag_compression_frontier.png`, `token_compression_frontier.png`
+- [ ] Optional: open `rag_topk_drift.json` for one “chunk swap” example

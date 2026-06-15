@@ -22,6 +22,10 @@ python/data/glove*
 python/data/canvas_chunks.json
 python/data/metadata.json
 python/data/rag_metadata.json
+python/data/rag_eval_manifest.json
+python/data/rag_topk_drift.json
+python/data/rag_queries_full_baseline.yaml
+python/data/presentation_results.json
 python/data/chunk_manifest.json
 python/data/github_book/
 
