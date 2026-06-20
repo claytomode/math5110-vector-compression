@@ -13,7 +13,8 @@
 
 \title{\textbf{Vector Compression for High-Dimensional Data}\\[0.4em]
 \large A survey of linear-algebra compression methods with an honest retrieval evaluation}
-\author{MATH 5110, Applied Linear Algebra\\
+\author{Clayton Schmidter\\
+MATH 5110, Applied Linear Algebra\\
 \href{https://github.com/claytomode/math5110-vector-compression}{\texttt{github.com/claytomode/math5110-vector-compression}}}
 \date{}
 
@@ -174,7 +175,7 @@ where the approximation replaces each magnitude $|r_j|$ by the root-mean-square 
 
 \subsection{Corpus and embeddings}
 
-The retrieval corpus is the source text of Professor He Wang's MATH 5110 textbook, \emph{Advanced Linear Algebra for AI}, pulled directly from its public Quarto (\texttt{.qmd}) repository. Chapters are split on section boundaries and then into overlapping character windows (900 characters per chunk, 120-character overlap), yielding \textbf{1{,}380 chunks}. Each chunk is embedded with \texttt{text-embedding-3-small} at $d = 256$. Retrieval is ranked by \textbf{cosine similarity} throughout (the scoring functions normalize vectors at comparison time), so ranking depends on direction, not magnitude.
+The retrieval corpus is the source text of Professor He Wang's MATH 5110 textbook, \emph{Advanced Linear Algebra for AI}, pulled directly from its public Quarto (\texttt{.qmd}) repository at \href{https://github.com/wanghemath/Book-AdvancedLinearAlgebraAI}{\texttt{github.com/wanghemath/Book-AdvancedLinearAlgebraAI}}. Chapters are split on section boundaries and then into overlapping character windows (900 characters per chunk, 120-character overlap), yielding \textbf{1{,}380 chunks}. Each chunk is embedded with \texttt{text-embedding-3-small} at $d = 256$. Retrieval is ranked by \textbf{cosine similarity} throughout (the scoring functions normalize vectors at comparison time), so ranking depends on direction, not magnitude.
 
 \subsection{Evaluation queries and metric}
 
