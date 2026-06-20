@@ -6,8 +6,8 @@ These are **pedagogical** implementations of the underlying linear algebra, not 
 
 ## Read this first
 
-- **[Paper — `docs/paper.pdf`](docs/paper.pdf)** — full write-up: theory → methods → results.
-- **[Presentation — `docs/presentation.pdf`](docs/presentation.pdf)** — slide deck.
+- **[Paper](docs/paper.pdf)** — full write-up: theory → methods → results.
+- **[Presentation](docs/presentation.pdf)** — slide deck.
 
 ## Demo
 
@@ -71,7 +71,6 @@ bun run dev   # API on :8010, UI on http://localhost:5173
 | Path                                 | Purpose                                 |
 | -------------------------------------- | ----------------------------------------- |
 | `python/src/vector_linalg/`          | Embeddings, compression, metrics, plots |
-| `python/notebooks/application.ipynb` | Token + RAG walkthrough                 |
 | `scripts/run_all.py`                 | End-to-end pipeline                     |
 | `backend/`, `frontend/`              | FastAPI search API + SvelteKit UI       |
 | `docs/paper.tex`, `docs/paper.pdf`   | Final academic paper (source + PDF)     |
