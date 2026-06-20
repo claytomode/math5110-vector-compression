@@ -101,11 +101,11 @@ The most aggressive linear compressor keeps only the sign of each coordinate,
 \end{equation}
 collapsing 32 bits per coordinate to 1, a nominal $32\times$ reduction. The geometric content of a sign vector is an angle, not a length: every $\hat{x}$ has fixed norm $\sqrt{d}$, so magnitude is discarded and only direction survives.
 
-\paragraph{Signs encode angles.} For a random hyperplane with normal $g \sim \mathcal{N}(0, I_d)$, the probability that two vectors fall on opposite sides is exactly proportional to the angle between them (the Goemans--Williamson identity):
+\paragraph{Signs encode angles.} For a random hyperplane with normal $g \sim \mathcal{N}(0, I_d)$, the probability that two vectors fall on opposite sides is exactly proportional to the angle between them, the Goemans--Williamson identity~\cite{goemans1995}:
 \begin{equation}
 \Pr\!\left[\operatorname{sign}(g^\top x) \ne \operatorname{sign}(g^\top y)\right] = \frac{\theta(x,y)}{\pi}, \qquad \theta(x,y) = \arccos\frac{\langle x, y\rangle}{\|x\|\,\|y\|}.
 \end{equation}
-Equivalently, sign-quantizing both vectors gives $\mathbb{E}\bigl[\tfrac1k \operatorname{sign}(Rx)^\top \operatorname{sign}(Ry)\bigr] = 1 - \tfrac{2}{\pi}\theta(x,y)$, so the dot product of sign codes is a monotone function of the angle and recovers cosine ordering. The quantized-JL (QJL) refinement keeps the query in full precision to cut variance. Using the Gaussian identity $\mathbb{E}\,[\,g\,\operatorname{sign}(g^\top x)] = \sqrt{2/\pi}\,x/\|x\|$, the estimator
+Equivalently, sign-quantizing both vectors gives $\mathbb{E}\bigl[\tfrac1k \operatorname{sign}(Rx)^\top \operatorname{sign}(Ry)\bigr] = 1 - \tfrac{2}{\pi}\theta(x,y)$, so the dot product of sign codes is a monotone function of the angle and recovers cosine ordering; this is the basis of sign-random-projection hashing (SimHash)~\cite{charikar2002}. The quantized-JL (QJL) refinement keeps the query in full precision to cut variance. Using the Gaussian identity $\mathbb{E}\,[\,g\,\operatorname{sign}(g^\top x)] = \sqrt{2/\pi}\,x/\|x\|$, the estimator
 \begin{equation}
 \operatorname{score}(q, x) = \sqrt{\tfrac{\pi}{2}}\cdot\frac{(Rq)^\top \operatorname{sign}(Rx)}{k} \;\approx\; \frac{\langle q, x\rangle}{\|x\|}
 \end{equation}
@@ -124,7 +124,7 @@ and the worst-case rounding error per coordinate is $\Delta/2$, giving the deter
 \|x - \hat{x}\|^2 \le d \cdot \left(\frac{\Delta}{2}\right)^2.
 \end{equation}
 
-\paragraph{Error scales as $4^{-b}$.} Modelling the rounding error of each coordinate as uniform on $[-\Delta/2, \Delta/2]$ gives the standard quantization-noise variance
+\paragraph{Error scales as $4^{-b}$.} Modelling the rounding error of each coordinate as uniform on $[-\Delta/2, \Delta/2]$ gives the standard quantization-noise variance~\cite{grayneuhoff1998}
 \begin{equation}
 \mathbb{E}\,(x_j - \hat{x}_j)^2 = \frac{\Delta^2}{12}, \qquad \mathbb{E}\,\|x - \hat{x}\|^2 = \frac{d\,\Delta^2}{12}.
 \end{equation}
@@ -137,7 +137,7 @@ Since $\Delta \propto 2^{-b}$, the mean-squared error falls as $4^{-b}$: each ex
 TurboQuant (Zandieh et al., ICLR 2026) is a \emph{data-oblivious} quantizer that is provably near-optimal for both mean-squared-error (MSE) and inner-product distortion. Its starting observation is that an MSE-optimal quantizer is a \emph{biased} inner-product estimator: minimizing reconstruction error and preserving dot products are different objectives, so a single quantizer cannot serve retrieval well. TurboQuant bridges the gap with a two-stage construction. For a target budget of $b$ bits per coordinate:
 \begin{itemize}
   \item \textbf{Stage 0 (rotate).} Each vector is multiplied by a random rotation $\Pi$, for instance the $Q$ factor of a random Gaussian matrix. For a vector on the unit sphere this makes every coordinate follow the same scaled Beta distribution, which converges to $\mathcal{N}(0, 1/d)$ in high dimension, and renders distinct coordinates nearly independent so each can be quantized on its own.
-  \item \textbf{Stage 1 (MSE-optimal scalar quantization, $b-1$ bits).} Because the per-coordinate distribution is known in closed form, TurboQuant precomputes the \textbf{Max--Lloyd} optimal scalar quantizer for that Beta distribution, the solution of a continuous one-dimensional $k$-means problem, and applies it to each rotated coordinate. This minimizes the $L_2$ norm of the residual $r = x - \hat{x}_1$ but, on its own, biases inner products.
+  \item \textbf{Stage 1 (MSE-optimal scalar quantization, $b-1$ bits).} Because the per-coordinate distribution is known in closed form, TurboQuant precomputes the \textbf{Max--Lloyd} optimal scalar quantizer~\cite{lloyd1982, max1960} for that Beta distribution, the solution of a continuous one-dimensional $k$-means problem, and applies it to each rotated coordinate. This minimizes the $L_2$ norm of the residual $r = x - \hat{x}_1$ but, on its own, biases inner products.
   \item \textbf{Stage 2 (1-bit QJL residual).} The residual is captured with the Quantized Johnson--Lindenstrauss transform: store $z = \operatorname{sign}(S r)$ for a random Gaussian sketch $S$, one bit per coordinate. Its inverse is an \emph{unbiased} inner-product estimator, so adding it back corrects the Stage-1 bias for one extra bit.
 \end{itemize}
 The full estimate uses a full-precision query against both stages,
@@ -276,11 +276,16 @@ This study uses one corpus, one embedding model, and one automatically generated
 
 Vector compression is governed by a single product, $n \cdot d \cdot (\text{bits per dimension})$, and by a single geometric requirement, approximate preservation of inner products. We surveyed four classical methods and one modern two-stage pipeline, implemented them from scratch, and evaluated them on a realistic textbook RAG task with full-precision ground truth. The results draw a clean line between geometry and ranking: Johnson--Lindenstrauss preserves distances but not retrieval order, sign quantization is extreme but brittle, truncated SVD is optimal in reconstruction yet costly to store, and scalar quantization is a deceptively strong baseline. TurboQuant's quantized-JL residual earns its overhead only at aggressive bit budgets, where it converts a 1-bit-class compressor into a competitive retriever. The practical recommendation is concise: choose TurboQuant when you must compress below 4 bits per dimension, choose scalar quantization otherwise, and always compare methods on measured bits per dimension against a retrieval metric, never on nominal labels or distance error alone.
 
-\begin{thebibliography}{9}
+\begin{thebibliography}{99}
 
 \bibitem{jl1984} Johnson, W. B., \& Lindenstrauss, J. (1984). Extensions of Lipschitz maps into a Hilbert space. \emph{Contemporary Mathematics}, 26, 189--206.
 \bibitem{dasgupta2003} Dasgupta, S., \& Gupta, A. (2003). An elementary proof of a theorem of Johnson and Lindenstrauss. \emph{Random Structures \& Algorithms}, 22(1), 60--65.
 \bibitem{eckart1936} Eckart, C., \& Young, G. (1936). The approximation of one matrix by another of lower rank. \emph{Psychometrika}, 1(3), 211--218.
+\bibitem{goemans1995} Goemans, M. X., \& Williamson, D. P. (1995). Improved approximation algorithms for maximum cut and satisfiability problems using semidefinite programming. \emph{Journal of the ACM}, 42(6), 1115--1145.
+\bibitem{charikar2002} Charikar, M. S. (2002). Similarity estimation techniques from rounding algorithms. \emph{STOC}, 380--388.
+\bibitem{lloyd1982} Lloyd, S. P. (1982). Least squares quantization in PCM. \emph{IEEE Transactions on Information Theory}, 28(2), 129--137.
+\bibitem{max1960} Max, J. (1960). Quantizing for minimum distortion. \emph{IRE Transactions on Information Theory}, 6(1), 7--12.
+\bibitem{grayneuhoff1998} Gray, R. M., \& Neuhoff, D. L. (1998). Quantization. \emph{IEEE Transactions on Information Theory}, 44(6), 2325--2383.
 \bibitem{rag2020} Lewis, P., et al. (2020). Retrieval-augmented generation for knowledge-intensive NLP tasks. \emph{NeurIPS}.
 \bibitem{qjl2025} Zandieh, A., et al. (2025). Quantized Johnson--Lindenstrauss transforms (QJL). \emph{AAAI}. \href{https://arxiv.org/abs/2406.03482}{arXiv:2406.03482}.
 \bibitem{polarquant2026} Zandieh, A., et al. (2026). PolarQuant: Quantizing the KV cache with polar coordinates. \emph{AISTATS}. \href{https://arxiv.org/abs/2502.02617}{arXiv:2502.02617}.
