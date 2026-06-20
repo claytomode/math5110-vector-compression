@@ -34,7 +34,7 @@ A single OpenAI \texttt{text-embedding-3-small} vector at $d = 256$ dimensions c
 
 Reducing any factor without destroying the geometry that downstream tasks depend on is the core problem of \textbf{vector compression}. The relevant geometry is almost always an inner product: retrieval ranks candidates by cosine similarity, and attention scores keys by dot product. When embeddings are L2-normalized, cosine similarity equals the dot product, so a compressor that approximately preserves inner products approximately preserves both ranking and attention.
 
-This project has three parts, mirroring the course structure:
+This project has three parts, moving from theory to computation to application:
 \begin{itemize}
   \item \textbf{Part 1 (Survey).} The linear algebra of four compression families plus the TurboQuant pipeline.
   \item \textbf{Part 2 (Computation).} NumPy implementations and two metric families: geometric distortion and retrieval overlap.
