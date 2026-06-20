@@ -29,7 +29,7 @@ Modern AI systems store billions of high-dimensional vectors (text embeddings, a
 
 \section{Introduction}
 
-A single OpenAI \texttt{text-embedding-3-small} vector at $d = 256$ dimensions costs $256 \times 32 = 8{,}192$ bits in \texttt{float32}. A modest corpus of one million chunks therefore costs roughly one gigabyte before any index structure is added, and production systems routinely store far more. The same arithmetic governs the attention key/value cache inside a running language model and the lookup table of token embeddings. In every case the cost is the product of three terms:
+A single OpenAI \texttt{text-embedding-3-small} vector~\cite{openai} at $d = 256$ dimensions costs $256 \times 32 = 8{,}192$ bits in \texttt{float32}. A modest corpus of one million chunks therefore costs roughly one gigabyte before any index structure is added, and production systems routinely store far more. The same arithmetic governs the attention key/value cache inside a running language model and the lookup table of token embeddings. In every case the cost is the product of three terms:
 \begin{equation}
 \text{storage} = n \cdot d \cdot (\text{bits per dimension}).
 \end{equation}
@@ -40,7 +40,7 @@ This project has three parts, moving from theory to computation to application:
 \begin{itemize}
   \item \textbf{Part 1 (Survey).} The linear algebra of four compression families plus the TurboQuant pipeline.
   \item \textbf{Part 2 (Computation).} NumPy implementations and two metric families: geometric distortion and retrieval overlap.
-  \item \textbf{Part 3 (Application).} A compressed textbook RAG index with a 300-query automatic evaluation and a live search UI.
+  \item \textbf{Part 3 (Application).} A compressed textbook retrieval-augmented generation (RAG)~\cite{rag2020} index with a 300-query automatic evaluation and a live search UI.
 \end{itemize}
 
 \paragraph{Contributions.}
@@ -52,7 +52,7 @@ Throughout, vectors live in $\mathbb{R}^d$. A query $q$ is scored against keys $
 
 \subsection{Johnson--Lindenstrauss random projection}
 
-The Johnson--Lindenstrauss (JL) lemma states that $n$ points in $\mathbb{R}^d$ can be linearly embedded into $\mathbb{R}^k$ with all pairwise distances preserved up to a factor of $(1 \pm \varepsilon)$, provided
+The Johnson--Lindenstrauss (JL) lemma~\cite{jl1984} states that $n$ points in $\mathbb{R}^d$ can be linearly embedded into $\mathbb{R}^k$ with all pairwise distances preserved up to a factor of $(1 \pm \varepsilon)$, provided
 \begin{equation}
 k = O\!\left(\varepsilon^{-2} \log n\right).
 \end{equation}
@@ -62,7 +62,7 @@ Critically, $k$ depends on the number of points and the tolerance, not on the am
 \begin{equation}
 \mathbb{E}\,\|Rx\|^2 = \sum_{i=1}^{k} \mathbb{E}\,y_i^2 = k \cdot \frac{\|x\|^2}{k} = \|x\|^2,
 \end{equation}
-which makes the projection an isometry in expectation. The quantity $\|Rx\|^2$ is an average of $k$ independent squared Gaussians, a $\chi^2$ random variable, and a standard concentration bound gives
+which makes the projection an isometry in expectation. The quantity $\|Rx\|^2$ is an average of $k$ independent squared Gaussians, a $\chi^2$ random variable, and a standard concentration bound~\cite{dasgupta2003} gives
 \begin{equation}
 \Pr\!\left[\,\bigl|\,\|Rx\|^2 - \|x\|^2\,\bigr| \ge \varepsilon \|x\|^2 \,\right] \le 2\exp\!\left(-\frac{k}{4}\bigl(\varepsilon^2 - \varepsilon^3\bigr)\right).
 \end{equation}
@@ -86,7 +86,7 @@ z = V_k^\top x \in \mathbb{R}^k, \qquad \hat{x} = V_k V_k^\top x.
 \end{equation}
 The operator $P_k = V_k V_k^\top$ is an orthogonal projector, satisfying $P_k^2 = P_k = P_k^\top$, so the residual $x - \hat{x}$ is orthogonal to the retained subspace and the Pythagorean relation $\|x\|^2 = \|\hat{x}\|^2 + \|x - \hat{x}\|^2$ holds exactly.
 
-\paragraph{Optimality and exact error.} Where JL is data-oblivious, SVD is data-optimal: it spends its $k$ dimensions on exactly the directions in which the corpus varies most. By the Eckart--Young theorem, $A_k$ is the best rank-$k$ approximation of $A$ in both the Frobenius and spectral norms, with error fixed precisely by the discarded singular values,
+\paragraph{Optimality and exact error.} Where JL is data-oblivious, SVD is data-optimal: it spends its $k$ dimensions on exactly the directions in which the corpus varies most. By the Eckart--Young theorem~\cite{eckart1936}, $A_k$ is the best rank-$k$ approximation of $A$ in both the Frobenius and spectral norms, with error fixed precisely by the discarded singular values,
 \begin{equation}
 \|A - A_k\|_F^2 = \sum_{i > k} \sigma_i^2, \qquad \|A - A_k\|_2 = \sigma_{k+1}.
 \end{equation}
@@ -135,7 +135,7 @@ Since $\Delta \propto 2^{-b}$, the mean-squared error falls as $4^{-b}$: each ex
 
 \subsection{TurboQuant: a two-stage pipeline}
 
-TurboQuant (Zandieh et al., ICLR 2026) is a \emph{data-oblivious} quantizer that is provably near-optimal for both mean-squared-error (MSE) and inner-product distortion. Its starting observation is that an MSE-optimal quantizer is a \emph{biased} inner-product estimator. Minimizing reconstruction error and preserving dot products are different objectives, so a single quantizer cannot serve retrieval well. TurboQuant bridges the gap with a two-stage construction. For a target budget of $b$ bits per coordinate:
+TurboQuant~\cite{turboquant2026} is a \emph{data-oblivious} quantizer that is provably near-optimal for both mean-squared-error (MSE) and inner-product distortion. Its starting observation is that an MSE-optimal quantizer is a \emph{biased} inner-product estimator. Minimizing reconstruction error and preserving dot products are different objectives, so a single quantizer cannot serve retrieval well. TurboQuant bridges the gap with a two-stage construction. For a target budget of $b$ bits per coordinate:
 \begin{itemize}
   \item \textbf{Stage 0 (rotate).} Each vector is multiplied by a random rotation $\Pi$, for instance the $Q$ factor of a random Gaussian matrix. For a vector on the unit sphere this makes every coordinate follow the same scaled Beta distribution, which converges to $\mathcal{N}(0, 1/d)$ in high dimension, and renders distinct coordinates nearly independent so each can be quantized on its own.
   \item \textbf{Stage 1 (MSE-optimal scalar quantization, $b-1$ bits).} Because the per-coordinate distribution is known in closed form, TurboQuant precomputes the \textbf{Max--Lloyd} optimal scalar quantizer~\cite{lloyd1982, max1960} for that Beta distribution, the solution of a continuous one-dimensional $k$-means problem, and applies it to each rotated coordinate. This minimizes the $L_2$ norm of the residual $r = x - \hat{x}_1$ but, on its own, biases inner products.
@@ -171,7 +171,7 @@ where the constant $\sqrt{3}\,\pi/2 \approx 2.7$ tightens to about $1.45$ at $b 
 \end{equation}
 Hence the reconstruction $Q_{\mathrm{qjl}}^{-1}(z) = \frac{\sqrt{\pi/2}}{d}\,\|r\|\,S^\top z$ is an \textbf{unbiased} inner-product estimate of the residual, $\mathbb{E}\,\langle y, Q_{\mathrm{qjl}}^{-1}(z)\rangle = \langle y, r\rangle$, with variance at most $\tfrac{\pi}{2d}\|y\|^2$. Adding this single-bit correction to the Stage-1 score makes the whole estimator unbiased and brings the inner-product distortion down to order $4^{-b}/d$, again within a constant of optimal.
 
-\paragraph{Further reading.} The treatment above is condensed and omits the proofs, including the matching information-theoretic lower bounds (argued via Shannon's lower bound and Yao's minimax principle) and the end-to-end KV-cache experiments. Readers who want the full development should consult the TurboQuant paper~\cite{turboquant2026}, the QJL transform it builds on~\cite{qjl2025}, and the PolarQuant key-cache variant~\cite{polarquant2026}.
+\paragraph{Further reading.} The treatment above is condensed and omits the proofs, including the matching information-theoretic lower bounds (argued via Shannon's lower bound and Yao's minimax principle) and the end-to-end KV-cache experiments. Readers who want the full development should consult the TurboQuant paper~\cite{turboquant2026}, the QJL transform it builds on~\cite{qjl2025}, and the PolarQuant key-cache variant~\cite{polarquant2026}; a high-level overview is also available on the Google Research blog~\cite{turboquantblog}.
 
 \paragraph{Why the two stages help.} The rotation (Stage 0) destroys any coordinate system in which energy is concentrated on a few axes and gives every coordinate the same known distribution, so a per-coordinate scalar quantizer is both optimal and cheap. Stage 1 then leaves behind a structured error, the same correlated, direction-biasing residual that hurts plain scalar quantization at low bit budgets. The key fact is that this residual, while not negligible, is small in norm and roughly isotropic after rotation, so it is exactly the kind of vector a 1-bit QJL sketch estimates well \emph{without bias}. Spending one bit per coordinate on the residual's inner-product contribution removes most of the Stage-1 bias without storing the residual itself. The payoff is largest where scalar quantization is weakest (2--3 bits) and shrinks once the Stage-1 quantizer is already accurate (4+ bits), where the rotation and residual become overhead.
 
@@ -332,22 +332,22 @@ Vector compression is governed by a single product, $n \cdot d \cdot (\text{bits
 \clearpage
 \begin{thebibliography}{99}
 
+\bibitem{openai} OpenAI. \href{https://platform.openai.com/docs/guides/embeddings}{Embeddings guide}: \texttt{text-embedding-3-small}, $d = 256$.
+\bibitem{rag2020} Lewis, P., et al. (2020). Retrieval-augmented generation for knowledge-intensive NLP tasks. \emph{NeurIPS}.
 \bibitem{jl1984} Johnson, W. B., \& Lindenstrauss, J. (1984). Extensions of Lipschitz maps into a Hilbert space. \emph{Contemporary Mathematics}, 26, 189--206.
 \bibitem{dasgupta2003} Dasgupta, S., \& Gupta, A. (2003). An elementary proof of a theorem of Johnson and Lindenstrauss. \emph{Random Structures \& Algorithms}, 22(1), 60--65.
 \bibitem{eckart1936} Eckart, C., \& Young, G. (1936). The approximation of one matrix by another of lower rank. \emph{Psychometrika}, 1(3), 211--218.
 \bibitem{goemans1995} Goemans, M. X., \& Williamson, D. P. (1995). Improved approximation algorithms for maximum cut and satisfiability problems using semidefinite programming. \emph{Journal of the ACM}, 42(6), 1115--1145.
 \bibitem{charikar2002} Charikar, M. S. (2002). Similarity estimation techniques from rounding algorithms. \emph{STOC}, 380--388.
+\bibitem{grayneuhoff1998} Gray, R. M., \& Neuhoff, D. L. (1998). Quantization. \emph{IEEE Transactions on Information Theory}, 44(6), 2325--2383.
+\bibitem{turboquant2026} Zandieh, A., Mirrokni, V., et al. (2026). TurboQuant: Online vector quantization with near-optimal distortion rate. \emph{ICLR}. \href{https://arxiv.org/abs/2504.19874}{arXiv:2504.19874}.
 \bibitem{lloyd1982} Lloyd, S. P. (1982). Least squares quantization in PCM. \emph{IEEE Transactions on Information Theory}, 28(2), 129--137.
 \bibitem{max1960} Max, J. (1960). Quantizing for minimum distortion. \emph{IRE Transactions on Information Theory}, 6(1), 7--12.
-\bibitem{grayneuhoff1998} Gray, R. M., \& Neuhoff, D. L. (1998). Quantization. \emph{IEEE Transactions on Information Theory}, 44(6), 2325--2383.
-\bibitem{rag2020} Lewis, P., et al. (2020). Retrieval-augmented generation for knowledge-intensive NLP tasks. \emph{NeurIPS}.
 \bibitem{qjl2025} Zandieh, A., et al. (2025). Quantized Johnson--Lindenstrauss transforms (QJL). \emph{AAAI}. \href{https://arxiv.org/abs/2406.03482}{arXiv:2406.03482}.
 \bibitem{polarquant2026} Zandieh, A., et al. (2026). PolarQuant: Quantizing the KV cache with polar coordinates. \emph{AISTATS}. \href{https://arxiv.org/abs/2502.02617}{arXiv:2502.02617}.
-\bibitem{turboquant2026} Zandieh, A., Mirrokni, V., et al. (2026). TurboQuant: Online vector quantization with near-optimal distortion rate. \emph{ICLR}. \href{https://arxiv.org/abs/2504.19874}{arXiv:2504.19874}.
+\bibitem{turboquantblog} Google Research (2026). \href{https://research.google/blog/turboquant-redefining-ai-efficiency-with-extreme-compression/}{TurboQuant: Redefining AI efficiency with extreme compression}.
 \bibitem{qdrant2026} Qdrant (2026). TurboQuant in Qdrant 1.18: rotation-based quantization with length renormalization and per-coordinate calibration. \href{https://qdrant.tech/articles/turboquant-quantization/}{qdrant.tech/articles/turboquant-quantization}.
 \bibitem{rabitq2024} Gao, J., \& Long, C. (2024). RaBitQ: Quantizing high-dimensional vectors with a theoretical error bound for approximate nearest neighbor search. \emph{SIGMOD}. \href{https://arxiv.org/abs/2405.12497}{arXiv:2405.12497}.
-\bibitem{turboquantblog} Google Research (2026). \href{https://research.google/blog/turboquant-redefining-ai-efficiency-with-extreme-compression/}{TurboQuant: Redefining AI efficiency with extreme compression}.
-\bibitem{openai} OpenAI. \href{https://platform.openai.com/docs/guides/embeddings}{Embeddings guide}: \texttt{text-embedding-3-small}, $d = 256$.
 
 \end{thebibliography}
 
