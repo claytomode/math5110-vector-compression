@@ -1,121 +1,79 @@
 # Vector compression for high-dimensional data
 
-**Survey:** Johnson–Lindenstrauss sketches, spectral truncation, sign quantization  
-**Application:** compress embeddings on token vectors and RAG retrieval over the **[MATH 5110 Quarto book](https://github.com/wanghemath/Book-AdvancedLinearAlgebraAI)** (recommended) or optional Canvas PDFs
+A MATH 5110 (Applied Linear Algebra) course project. We survey five ways to shrink high-dimensional embedding vectors — Johnson–Lindenstrauss random projection, truncated SVD, 1-bit sign quantization, scalar quantization, and TurboQuant — implement each from scratch in NumPy, and test them on a real retrieval task: a RAG index built from the [MATH 5110 Quarto textbook](https://github.com/wanghemath/Book-AdvancedLinearAlgebraAI), scored against full-precision ground truth. The central finding is that preserving distances is not the same as preserving ranking.
 
-Course project for applied linear algebra. Inspired by recent work on extreme vector compression ([Google Research — TurboQuant](https://research.google/blog/turboquant-redefining-ai-efficiency-with-extreme-compression/)); this repo implements **pedagogical** versions of the same linear-algebra ideas on word/token embeddings — not a reproduction of LLM KV-cache inference.
+These are **pedagogical** implementations of the underlying linear algebra, not a reproduction of LLM KV-cache inference.
 
-## Three-part structure
+## Read this first
 
-| Part | Content |
-|------|---------|
-| **1. Survey** | JL lemma, random projections, rank‑k / polar geometry, 1-bit signs, scalar quantization |
-| **2. Computation** | NumPy implementations + recall@k / distance distortion metrics |
-| **3. Application** | Token + RAG retrieval under compression; **GitHub book** (default) or Canvas PDFs |
+- **[Paper — `docs/paper.pdf`](docs/paper.pdf)** — full write-up: theory → methods → results.
+- **[Presentation — `docs/presentation.pdf`](docs/presentation.pdf)** — slide deck.
 
-## Quick start
+## Demo
 
-Requires [uv](https://docs.astral.sh/uv/) and Python 3.12+.
+A small web app (SvelteKit + FastAPI) searches the textbook index and compares compressed methods side by side.
 
-Set credentials in `.env` (gitignored). **Do not paste keys in chat.**
+Compare mode runs one query against every index at once, so you can watch the ranking drift as the bit budget shrinks:
 
-**Azure OpenAI / AI Foundry** (often has university/free Azure credits):
+![Comparing retrieval across compressed indexes](docs/figures/screenshot-1.png)
+
+Single-index mode shows the retrieved chunks in full for one method:
+
+![Single-index search with an expanded chunk](docs/figures/screenshot-2.png)
+
+## Setup
+
+Requires [uv](https://docs.astral.sh/uv/) and Python 3.12+. Set embedding credentials in `.env`:
+
+**Azure OpenAI**:
 
 ```
 AZURE_OPENAI_API_KEY=...
 AZURE_OPENAI_ENDPOINT=https://YOUR-RESOURCE.openai.azure.com/
 ```
 
-In `python/config.yaml`, set `embeddings.provider: azure` and `embeddings.azure_deployment` to your **deployment name** from the Azure portal.
+Then set `embeddings.provider: azure` and `embeddings.azure_deployment` (your deployment name) in `python/config.yaml`.
 
-**Direct OpenAI** (requires billing on platform.openai.com):
+**Direct OpenAI**:
 
 ```
 OPENAI_API_KEY=sk-...
 ```
 
-Set `embeddings.provider: openai` in config.
+Then set `embeddings.provider: openai` in `python/config.yaml`.
 
-### RAG corpus (default: professor's GitHub book)
+## Run
 
-`python/config.yaml` uses `rag.source: github_book`, which pulls chapter `.qmd` files from [wanghemath/Book-AdvancedLinearAlgebraAI](https://github.com/wanghemath/Book-AdvancedLinearAlgebraAI). This is the MATH 5110 interactive textbook source — readable text with LaTeX stripped, no PDF OCR. The [GitHub Pages site](https://wanghemath.github.io/Book-AdvancedLinearAlgebraAI/) may 404; the repo still works.
-
-Search the index:
-
-```bash
-uv run python scripts/search_class.py "What is the singular value decomposition?"
-```
-
-**Web UI** (Svelte + FastAPI — search + index size table):
-
-Requires [uv](https://docs.astral.sh/uv/) (API) and [Bun](https://bun.sh) (frontend). From the repo root:
-
-```bash
-uv sync --directory backend
-bun install
-cd frontend && bun install && cd ..
-bun run dev
-```
-
-`bun run dev` starts **uvicorn** via `uv run --directory backend` (port 8010) and **Vite** via `bun run dev` in `frontend/` (port 5173).
-
-Or: `uv run python scripts/search_ui.py` (same thing).
-
-Opens http://127.0.0.1:5173 — compare retrieval across compressed indexes.
-
-### Canvas PDFs (optional; image-heavy slides)
-
-1. Canvas → **Account → Settings → Approved Integrations** → create access token.
-2. Add to `.env`:
-   ```
-   CANVAS_BASE_URL=https://yourschool.instructure.com
-   CANVAS_API_TOKEN=...
-   CANVAS_COURSE_ID=...
-   ```
-3. Set `rag.source: canvas` in `python/config.yaml`.
-4. Run `uv run python scripts/list_rag_chunks.py` after first sync; update `python/data/rag_queries.yaml` with real chunk ids.
-
-PDFs cache to `python/data/canvas_pdfs/` (gitignored). Generated embeddings (`*.parquet`) are local cache only — never commit `.env` or course PDFs.
+End-to-end pipeline (embeddings → compression study → figures):
 
 ```bash
 uv sync
 uv run python scripts/run_all.py
 ```
 
-**Outputs:**
+Search the RAG index from the command line:
 
-- `python/data/token_embeddings.parquet`, `metadata.json`
-- `python/figures/*.png` (token embedding compression)
-- `python/figures/rag/*.png` (RAG frontier, value ranking, drift summary)
-- `python/data/presentation_results.json` (headline numbers for slides)
+```bash
+uv run python scripts/search_class.py "What is the singular value decomposition?"
+```
 
-**Notebook:** `python/notebooks/application.ipynb`  
-**Paper:** `docs/paper.tex` + `docs/paper.pdf` — full academic write-up (theory → methods → results)
+Web UI (SvelteKit + FastAPI — search and compare index sizes side by side). Requires [Bun](https://bun.sh):
+
+```bash
+uv sync --directory backend
+cd frontend && bun install && cd ..
+bun run dev   # API on :8010, UI on http://localhost:5173
+```
 
 ## Repo layout
 
-| Path | Purpose |
-|------|---------|
-| `python/src/vector_linalg/` | Embeddings, compression, metrics, plots |
-| `backend/` | FastAPI search API (`uv sync --directory backend`) |
-| `frontend/` | SvelteKit UI (`bun install` in `frontend/`) |
-| `scripts/run_all.py` | End-to-end pipeline |
-| `docs/paper.tex`, `docs/paper.pdf` | Final academic paper (LaTeX source + rendered PDF) |
 
-## Demo path (presentation)
+| Path                                 | Purpose                                 |
+| -------------------------------------- | ----------------------------------------- |
+| `python/src/vector_linalg/`          | Embeddings, compression, metrics, plots |
+| `python/notebooks/application.ipynb` | Token + RAG walkthrough                 |
+| `scripts/run_all.py`                 | End-to-end pipeline                     |
+| `backend/`, `frontend/`              | FastAPI search API + SvelteKit UI       |
+| `docs/paper.tex`, `docs/paper.pdf`   | Final academic paper (source + PDF)     |
 
-1. **Regenerate data:** `uv run python scripts/run_all.py` → figures + `presentation_results.json`
-2. **Notebook:** `python/notebooks/application.ipynb` (token + RAG tables)
-3. **Web UI:** `bun run dev` → http://localhost:5173 (compare `turboquant_4bit`, `sign_1bit`, `scalar_8bit`)
-4. **Paper + figures:** `docs/paper.pdf` + `docs/figures/`
-
-**Headline RAG result:** `turboquant_2bit` → **76%** top-3 overlap at **10×** compression vs scalar 2-bit **63%** — shows why TurboQuant’s QJL residual stage exists.
-
-## Data citation
-
-Token vectors from the [OpenAI Embeddings API](https://platform.openai.com/docs/guides/embeddings) (`text-embedding-3-small`, cached locally). See `python/data/metadata.json` after first run.
-
-## Presentation arc
-
-1. **Survey (most of talk):** why high-dimensional vectors are expensive; JL preserves distances; polar/spectral = radius + direction; sign bits for dot products.
-2. **Application (end):** show recall@k vs bits on token embeddings — “same math that powers compressed attention keys and vector search.”
+Token vectors are embedded with the [OpenAI Embeddings API](https://platform.openai.com/docs/guides/embeddings) (`text-embedding-3-small`) and cached locally.

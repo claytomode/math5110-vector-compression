@@ -1,12 +1,9 @@
-"""Extract and chunk text from PDF files."""
+"""Text chunk container and helpers shared by corpus loaders."""
 
 from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from pathlib import Path
-
-import fitz
 
 
 @dataclass(frozen=True)
@@ -22,7 +19,7 @@ def _normalize_whitespace(text: str) -> str:
 
 
 def chunk_is_usable(text: str, *, min_words: int = 12, min_alnum_ratio: float = 0.38) -> bool:
-    """Drop near-empty pages, TOC dot-leaders, and image-only PDF regions."""
+    """Drop near-empty fragments, TOC dot-leaders, and non-prose regions."""
     text = _normalize_whitespace(text)
     if len(text) < 60:
         return False
@@ -33,15 +30,6 @@ def chunk_is_usable(text: str, *, min_words: int = 12, min_alnum_ratio: float = 
         return False
     alnum = len(re.findall(r"[A-Za-z0-9]", text))
     return alnum / len(text) >= min_alnum_ratio
-
-
-def extract_pdf_text(path: Path) -> str:
-    doc = fitz.open(path)
-    try:
-        pages = [_normalize_whitespace(page.get_text("text")) for page in doc]
-    finally:
-        doc.close()
-    return "\n\n".join(p for p in pages if p)
 
 
 def chunk_text(text: str, *, chunk_chars: int, overlap: int) -> list[str]:
@@ -62,25 +50,3 @@ def chunk_text(text: str, *, chunk_chars: int, overlap: int) -> list[str]:
             break
         start = max(0, end - overlap)
     return chunks
-
-
-def build_pdf_chunks(
-    pdf_paths: list[Path],
-    *,
-    chunk_chars: int,
-    chunk_overlap: int,
-) -> list[TextChunk]:
-    out: list[TextChunk] = []
-    for path in sorted(pdf_paths):
-        stem = path.stem
-        raw = extract_pdf_text(path)
-        pieces = chunk_text(raw, chunk_chars=chunk_chars, overlap=chunk_overlap)
-        for i, piece in enumerate(pieces):
-            out.append(
-                TextChunk(
-                    chunk_id=f"{stem}_c{i:03d}",
-                    source_file=path.name,
-                    text=piece,
-                )
-            )
-    return out

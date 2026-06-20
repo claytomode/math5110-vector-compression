@@ -27,11 +27,6 @@ class EmbeddingsConfig:
 
 
 @dataclass(frozen=True)
-class CanvasConfig:
-    course_id: int | None
-
-
-@dataclass(frozen=True)
 class GithubBookConfig:
     owner: str
     repo: str
@@ -56,7 +51,6 @@ class RagConfig:
     recall_k: int
     chunk_chars: int
     chunk_overlap: int
-    canvas: CanvasConfig
     github_book: GithubBookConfig
     eval: RagEvalConfig
 
@@ -111,10 +105,6 @@ class ProjectConfig:
     def github_book_cache_dir(self) -> Path:
         return self.data_dir / "github_book"
 
-    @property
-    def canvas_pdf_dir(self) -> Path:
-        return self.data_dir / "canvas_pdfs"
-
     def rel_path(self, path: Path) -> str:
         try:
             return str(path.relative_to(self.repo_root))
@@ -150,7 +140,6 @@ def load_config(path: Path | None = None) -> ProjectConfig:
     comp = raw.get("compression", {})
     emb = raw.get("embeddings", {})
     rag = raw.get("rag", {})
-    canvas = rag.get("canvas", {})
     book = rag.get("github_book", {})
     ev = rag.get("eval", {})
     return ProjectConfig(
@@ -174,9 +163,6 @@ def load_config(path: Path | None = None) -> ProjectConfig:
             recall_k=int(rag.get("recall_k", 3)),
             chunk_chars=int(rag.get("chunk_chars", 900)),
             chunk_overlap=int(rag.get("chunk_overlap", 120)),
-            canvas=CanvasConfig(
-                course_id=canvas.get("course_id"),
-            ),
             github_book=GithubBookConfig(
                 owner=book.get("owner", "wanghemath"),
                 repo=book.get("repo", "Book-AdvancedLinearAlgebraAI"),

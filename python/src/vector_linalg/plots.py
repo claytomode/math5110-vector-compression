@@ -7,7 +7,6 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-import polars as pl
 from matplotlib.figure import Figure
 from matplotlib.patches import Patch
 

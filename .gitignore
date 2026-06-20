@@ -16,10 +16,8 @@ __pycache__/
 .env
 .env.*
 !.env.example
-python/data/canvas_pdfs/
 python/data/*.parquet
 python/data/glove*
-python/data/canvas_chunks.json
 python/data/metadata.json
 python/data/rag_metadata.json
 python/data/rag_eval_manifest.json

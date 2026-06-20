@@ -58,7 +58,7 @@ def print_takeaways(
     best = max(results, key=lambda r: r.recall_at_k)
     print("\n=== Takeaways ===")
     print(f"  Universe: {n_tokens} tokens, d={dim} ({model} embeddings).")
-    print(f"  Task: preserve nearest-neighbor geometry under compression.")
+    print("  Task: preserve nearest-neighbor geometry under compression.")
     print(f"  Best recall@{recall_k}: {best.method} ({best.recall_at_k:.3f}) at ~{best.bits_per_dim:.1f} bits/dim.")
     print("  Survey link: JL + sign quantization + spectral truncation mirror TurboQuant-style pipelines.")
     print("  (Not LLM KV-cache inference — same linear-algebra tools on token vectors.)")

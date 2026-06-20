@@ -8,7 +8,7 @@ embeddings:
   dimensions: 256
   batch_size: 128
 
-# RAG: source = yaml (demo) | canvas (PDFs) | github_book (Quarto .qmd, recommended)
+# RAG: source = yaml (demo) | github_book (Quarto .qmd, recommended)
 rag:
   enabled: true
   source: github_book
@@ -27,8 +27,6 @@ rag:
     repo: Book-AdvancedLinearAlgebraAI
     branch: main
     chapters_dir: chapters
-  canvas:
-    course_id: null
 
 tokens:
   - the

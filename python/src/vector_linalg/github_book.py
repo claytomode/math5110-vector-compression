@@ -9,7 +9,7 @@ from pathlib import Path
 
 import httpx
 
-from vector_linalg.pdf_corpus import TextChunk, chunk_is_usable, chunk_text
+from vector_linalg.text_chunks import TextChunk, chunk_is_usable, chunk_text
 
 
 @dataclass(frozen=True)

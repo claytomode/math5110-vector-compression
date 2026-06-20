@@ -22,7 +22,7 @@ def main() -> None:
 
     cfg = load_config()
     bundle = fetch_rag_embeddings(cfg)
-    print(f"Index: {len(bundle.chunk_ids)} chunks from Canvas PDFs\n")
+    print(f"Index: {len(bundle.chunk_ids)} chunks from the course corpus\n")
     print(f"Query: {query}\n")
 
     for hit in search_corpus(query, bundle, cfg, top_k=5):
