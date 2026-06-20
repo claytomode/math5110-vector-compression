@@ -13,7 +13,7 @@
 \graphicspath{{figures/}}
 
 \title{\textbf{Vector Compression for High-Dimensional Data}\\[0.4em]
-\large From Johnson--Lindenstrauss to TurboQuant: a survey of linear-algebra compression methods with an honest retrieval evaluation}
+\large Comparing classical and modern compression methods\\ with full-precision retrieval as ground truth}
 \author{Clayton Schmidter\\
 MATH 5110, Applied Linear Algebra\\
 \href{https://github.com/claytomode/math5110-vector-compression}{\texttt{github.com/claytomode/math5110-vector-compression}}}
@@ -205,7 +205,7 @@ where the approximation replaces each magnitude $|r_j|$ by the root-mean-square 
 \end{itemize}
 The consequence is honesty about bits. Our \texttt{turboquant\_2bit} actually consumes about $3.2$ bits per dimension (two Stage-1 bits, one residual bit, plus amortized rotation and norm metadata), not the nominal $2.0$.
 
-\paragraph{TurboQuant in a production database.} While this project was being written, TurboQuant moved from a research result into a shipping feature. The Qdrant vector database added it as a first-class quantization mode in version 1.18 (May 2026)~\cite{qdrant2026}. Their engineering modifications are instructive precisely because they confront the same theory-versus-practice gaps that motivated our own simplifications, only resolved with production-grade tools rather than pedagogical shortcuts.
+\paragraph{TurboQuant in a production database.} While this project was being written, TurboQuant moved from a research result to a production feature. The Qdrant vector database added it as a first-class quantization mode in version 1.18 (May 2026)~\cite{qdrant2026}. Their engineering modifications are instructive precisely because they confront the same theory-versus-practice gaps that motivated our own simplifications, only resolved with production-grade tools rather than pedagogical shortcuts.
 \begin{itemize}
   \item \textbf{Structured rotation.} Like us, Qdrant replaces the dense $O(d^2)$ rotation with a structured one, a fast Hadamard transform that spreads variance across coordinates in $O(d \log d)$ time while staying data-oblivious. Our signed permutation is the same idea taken to its cheapest extreme.
   \item \textbf{Calibration for real embeddings.} The original method assumes the rotated coordinates are isotropic, which real embeddings only approximately satisfy, so Qdrant adds a per-coordinate calibration pre-pass that fits production data to the precomputed codebooks. This is the practical counterpart to the near-isotropy we simply assume.
@@ -276,14 +276,14 @@ To produce these results we compress the full set of 1{,}380 chunk embeddings on
   \end{tabular}
 \end{table}
 
+Reading the scatter in Figure~\ref{fig:frontier}, each point is one index; better methods push toward the upper-right (high accuracy, high compression), and the red curve connects the Pareto-optimal ones. Two features dominate. First, the JL points (\texttt{jl\_128}, \texttt{jl\_64}) sit far \emph{below} the frontier. Despite their strong distance guarantees they are the worst retrievers per bit, the clearest visual statement of the geometry-versus-ranking gap. Second, the frontier itself changes hands with the budget. In the low-bit corner the TurboQuant points lie above the scalar points at matched stage-1 bits, where the residual correction is decisive (TurboQuant 2-bit at 76.1\% versus scalar 2-bit at 62.8\%, a 13-point gain). Once 4 bits are affordable the two families converge in accuracy (93.3\% vs 93.2\%) and scalar takes over the frontier, because it avoids TurboQuant's rotation and residual overhead and therefore lands at a smaller measured bit cost.
+
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.72\textwidth]{rag_compression_frontier.png}
+  \includegraphics[width=\textwidth]{rag_compression_frontier.png}
   \caption{RAG compression frontier: top-3 overlap versus compression ratio (upper-right is better), with the Pareto-optimal methods joined by the red curve. JL configurations sit well below the frontier; TurboQuant owns the low-bit corner, while scalar quantization takes over once 4 bits per dimension are affordable.}
   \label{fig:frontier}
 \end{figure}
-
-Reading the scatter in Figure~\ref{fig:frontier}, each point is one index; better methods push toward the upper-right (high accuracy, high compression), and the red curve connects the Pareto-optimal ones. Two features dominate. First, the JL points (\texttt{jl\_128}, \texttt{jl\_64}) sit far \emph{below} the frontier. Despite their strong distance guarantees they are the worst retrievers per bit, the clearest visual statement of the geometry-versus-ranking gap. Second, the frontier itself changes hands with the budget. In the low-bit corner the TurboQuant points lie above the scalar points at matched stage-1 bits, where the residual correction is decisive (TurboQuant 2-bit at 76.1\% versus scalar 2-bit at 62.8\%, a 13-point gain). Once 4 bits are affordable the two families converge in accuracy (93.3\% vs 93.2\%) and scalar takes over the frontier, because it avoids TurboQuant's rotation and residual overhead and therefore lands at a smaller measured bit cost.
 
 \subsection{Retrieval drift}
 
@@ -291,7 +291,7 @@ Where the frontier reports an average, Figure~\ref{fig:drift} shows the distribu
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.72\textwidth]{rag_drift_summary.png}
+  \includegraphics[width=\textwidth]{rag_drift_summary.png}
   \caption{Per-query top-3 drift from full precision across the 300 evaluation queries. Each bar splits into perfect matches, partial drift, and zero-overlap failures; high-bit scalar and TurboQuant keep almost every query in the perfect band, while \texttt{rank\_8} and \texttt{jl\_16} are dominated by drift and failures.}
   \label{fig:drift}
 \end{figure}
@@ -302,7 +302,7 @@ To check that our conclusions are not an artifact of the textbook corpus, we rep
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.72\textwidth]{token_vs_rag.png}
+  \includegraphics[width=\textwidth]{token_vs_rag.png}
   \caption{Cross-check on a second corpus: token nearest-neighbor recall@10 (blue) versus RAG top-3 overlap (orange) for each method. The two tasks rank the methods in the same order, so the headline findings are not specific to the textbook dataset.}
   \label{fig:tokenvsrag}
 \end{figure}
@@ -316,6 +316,8 @@ To check that our conclusions are not an artifact of the textbook corpus, we rep
 \paragraph{Distance theory is not retrieval theory.} This is the project's sharpest lesson. JL has the strongest theoretical guarantee of any method here, yet \texttt{jl\_128} retrieves only 39\% of the true top-3. The lemma preserves the \emph{magnitude} of pairwise distances, but top-$k$ retrieval depends on their \emph{order}, and a near-isometry can still permute close neighbors. Geometry preservation is necessary but not sufficient for ranking.
 
 \paragraph{Labels are not bit budgets.} A method's name encodes a design parameter, not its true cost. TurboQuant 2-bit consumes about 3.2 bits per dimension once residual and metadata are counted, and rank-$k$ stores a shared basis on top of per-vector coefficients. Fair comparison requires plotting against \emph{measured} bits per dimension, which is why every table here reports it.
+
+\paragraph{A single principle for retrieval.} A single idea connects the four points above. Every method approximates the same quantity, the inner product between embeddings, and for ranked retrieval what separates the winners from the losers is whether they preserve the angular \emph{order} of near-neighbors rather than the \emph{magnitude} of distances. JL preserves magnitudes almost perfectly yet still fails because it perturbs that order, while scalar and TurboQuant succeed because their error is smallest where rankings are decided. The rotation in TurboQuant helps for the same reason, turning a cheap per-coordinate quantizer into an approximately angle-preserving map. The important caveat is that this principle is specific to retrieval. A task that uses the reconstructed vectors directly, such as attention over a quantized KV cache, depends on absolute inner-product magnitudes and may well reward a different trade-off, which is exactly why the published TurboQuant keeps the unbiased residual that we drop.
 
 \section{Limitations}
 
