@@ -265,7 +265,14 @@ Where the frontier reports an average, Figure~\ref{fig:drift} shows the distribu
 
 \subsection{Token study (cross-check)}
 
-On a smaller, easier token-embedding task (recall@10), the ordering is the same: TurboQuant leads scalar at matched stage-1 bits (87.0\% vs 82.5\% at 2 bits; 94.8\% vs 90.7\% at 3 bits) and the gap closes by 4 bits (97.2\% vs 95.8\%). This consistency across two corpora supports the conclusions below rather than attributing them to one dataset.
+To check that our conclusions are not an artifact of the textbook corpus, we repeat the experiment on a separate, smaller set of word/token embeddings under a different metric: nearest-neighbor \textbf{recall@10} (for each token, the fraction of its ten true nearest neighbors that the compressed index still recovers). Figure~\ref{fig:tokenvsrag} places this token recall (blue) next to the RAG overlap@3 (orange) for every method, and the two bars track each other closely across the whole ladder. The ordering is identical: TurboQuant leads scalar at matched stage-1 bits (87.0\% vs 82.5\% at 2 bits; 94.8\% vs 90.7\% at 3 bits), the gap closes by 4 bits (97.2\% vs 95.8\%), and JL remains the weakest per bit. This consistency across two corpora and two metrics supports the conclusions below rather than attributing them to one dataset.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{token_vs_rag.png}
+  \caption{Cross-check on a second corpus: token nearest-neighbor recall@10 (blue) versus RAG top-3 overlap (orange) for each method. The two tasks rank the methods in the same order, so the headline findings are not specific to the textbook dataset.}
+  \label{fig:tokenvsrag}
+\end{figure}
 
 \section{Discussion}
 
