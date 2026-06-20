@@ -1222,7 +1222,7 @@ wheels = [
 [[package]]
 name = "vector-linalg"
 version = "0.2.0"
-source = { directory = "../" }
+source = { editable = "../" }
 dependencies = [
     { name = "httpx" },
     { name = "matplotlib" },
@@ -1267,7 +1267,7 @@ dependencies = [
 requires-dist = [
     { name = "fastapi", specifier = ">=0.136.1" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.46.0" },
-    { name = "vector-linalg", directory = "../" },
+    { name = "vector-linalg", editable = "../" },
 ]
 
 [[package]]

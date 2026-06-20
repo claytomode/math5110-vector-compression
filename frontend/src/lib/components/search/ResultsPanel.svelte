@@ -10,10 +10,19 @@
     data: SearchResponse | null;
     loading: boolean;
   } = $props();
+
+  let allOpen = $state(false);
 </script>
 
 <section class="panel">
-  <h2 class="panel-title">Results</h2>
+  <div class="panel-head">
+    <h2 class="panel-title">Results</h2>
+    {#if data && !loading}
+      <button type="button" class="expand-all" onclick={() => (allOpen = !allOpen)}>
+        {allOpen ? "Collapse all" : "Expand all"}
+      </button>
+    {/if}
+  </div>
 
   {#if loading}
     <div class="skeleton" aria-hidden="true">
@@ -41,7 +50,7 @@
             <p class="empty small">No hits.</p>
           {:else}
             {#each block.hits as hit (block.method + "-" + hit.rank)}
-              <HitCard {hit} />
+              <HitCard {hit} open={allOpen} />
             {/each}
           {/if}
         </div>
@@ -55,7 +64,7 @@
       <p class="empty">No hits.</p>
     {:else}
       {#each data.hits as hit (hit.rank)}
-        <HitCard {hit} />
+        <HitCard {hit} open={allOpen} />
       {/each}
     {/if}
   {/if}
@@ -70,12 +79,33 @@
     box-shadow: var(--shadow);
     min-height: 12rem;
   }
+  .panel-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin: 0 0 0.85rem;
+  }
   .panel-title {
     font-family: var(--font-serif);
     font-size: 1.15rem;
     font-weight: 600;
-    margin: 0 0 0.85rem;
+    margin: 0;
     color: var(--color-text);
+  }
+  .expand-all {
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-text-muted);
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 0.25rem 0.6rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+  }
+  .expand-all:hover {
+    color: var(--color-accent);
+    border-color: var(--color-accent);
   }
   .meta {
     margin: 0 0 0.75rem;

@@ -90,8 +90,9 @@ uv run python scripts/run_all.py
 - `python/data/presentation_results.json` (headline numbers for slides)
 
 **Notebook:** `python/notebooks/application.ipynb`  
-**Survey write-up:** `docs/SURVEY.md`  
-**Slides (finalized):** `docs/SLIDES.md` — includes “why this project matters”, TurboQuant 2/3/4/8-bit table, demo checklist
+**Paper:** `docs/PAPER.md` — full academic write-up (theory → methods → results)  
+**Extended write-up:** `docs/WRITEUP.md` — longer narrative with implementation detail  
+**Survey notes:** `docs/SURVEY.md` — Part 1 theory
 
 ## Repo layout
 
@@ -101,15 +102,16 @@ uv run python scripts/run_all.py
 | `backend/` | FastAPI search API (`uv sync --directory backend`) |
 | `frontend/` | SvelteKit UI (`bun install` in `frontend/`) |
 | `scripts/run_all.py` | End-to-end pipeline |
+| `docs/PAPER.md` | Final academic paper |
+| `docs/WRITEUP.md` | Extended theory-to-results write-up |
 | `docs/SURVEY.md` | Part 1 theory narrative |
-| `docs/SLIDES.md` | Presentation outline (copy to slides) |
 
 ## Demo path (presentation)
 
 1. **Regenerate data:** `uv run python scripts/run_all.py` → figures + `presentation_results.json`
 2. **Notebook:** `python/notebooks/application.ipynb` (token + RAG tables)
 3. **Web UI:** `bun run dev` → http://localhost:5173 (compare `turboquant_4bit`, `sign_1bit`, `scalar_8bit`)
-4. **Slides:** `docs/SLIDES.md` + `python/figures/rag/rag_compression_frontier.png`
+4. **Paper + figures:** `docs/PAPER.md` + `docs/figures/`
 
 **Headline RAG result:** `turboquant_2bit` → **76%** top-3 overlap at **10×** compression vs scalar 2-bit **63%** — shows why TurboQuant’s QJL residual stage exists.
 

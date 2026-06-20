@@ -46,6 +46,22 @@ export function formatBytes(n: number): string {
   return `${n.toLocaleString()} B`;
 }
 
+export function chunkTitle(chunkId: string): string {
+  const base = chunkId.replace(/_c\d+$/, "");
+  const parts = base.split("-");
+  const capitalize = (w: string) => (w ? w.charAt(0).toUpperCase() + w.slice(1) : w);
+  if (parts[0] === "chapter" && /^\d+$/.test(parts[1] ?? "")) {
+    const rest = parts.slice(2).map(capitalize).join(" ");
+    return rest ? `Ch. ${parts[1]} — ${rest}` : `Ch. ${parts[1]}`;
+  }
+  return parts.map(capitalize).join(" ");
+}
+
+export function chunkSection(chunkId: string): string {
+  const m = chunkId.match(/_c(\d+)$/);
+  return m ? `§${parseInt(m[1], 10) + 1}` : "";
+}
+
 export function methodLabel(method: string): string {
   const labels: Record<string, string> = {
     full_precision: "Full float32",

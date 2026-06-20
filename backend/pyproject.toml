@@ -10,7 +10,7 @@ dependencies = [
 ]
 
 [tool.uv.sources]
-vector-linalg = { path = ".." }
+vector-linalg = { path = "..", editable = true }
 
 [build-system]
 requires = ["hatchling"]

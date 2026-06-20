@@ -395,4 +395,4 @@ The project exercises **SVD**, **random projections**, **orthonormal transforms*
 
 ---
 
-*Shorter survey outline: [`SURVEY.md`](SURVEY.md). Slide-by-slide deck notes: [`SLIDES.md`](SLIDES.md).*
+*Final paper: [`PAPER.md`](PAPER.md). Shorter survey outline: [`SURVEY.md`](SURVEY.md).*
