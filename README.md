@@ -90,7 +90,7 @@ uv run python scripts/run_all.py
 - `python/data/presentation_results.json` (headline numbers for slides)
 
 **Notebook:** `python/notebooks/application.ipynb`  
-**Paper:** `docs/PAPER.md` (Markdown) · `docs/paper.tex` + `docs/paper.pdf` (typeset) — full academic write-up (theory → methods → results)
+**Paper:** `docs/paper.tex` + `docs/paper.pdf` — full academic write-up (theory → methods → results)
 
 ## Repo layout
 
@@ -100,15 +100,14 @@ uv run python scripts/run_all.py
 | `backend/` | FastAPI search API (`uv sync --directory backend`) |
 | `frontend/` | SvelteKit UI (`bun install` in `frontend/`) |
 | `scripts/run_all.py` | End-to-end pipeline |
-| `docs/PAPER.md` | Final academic paper (Markdown) |
-| `docs/paper.tex`, `docs/paper.pdf` | Typeset LaTeX paper + rendered PDF |
+| `docs/paper.tex`, `docs/paper.pdf` | Final academic paper (LaTeX source + rendered PDF) |
 
 ## Demo path (presentation)
 
 1. **Regenerate data:** `uv run python scripts/run_all.py` → figures + `presentation_results.json`
 2. **Notebook:** `python/notebooks/application.ipynb` (token + RAG tables)
 3. **Web UI:** `bun run dev` → http://localhost:5173 (compare `turboquant_4bit`, `sign_1bit`, `scalar_8bit`)
-4. **Paper + figures:** `docs/PAPER.md` + `docs/figures/`
+4. **Paper + figures:** `docs/paper.pdf` + `docs/figures/`
 
 **Headline RAG result:** `turboquant_2bit` → **76%** top-3 overlap at **10×** compression vs scalar 2-bit **63%** — shows why TurboQuant’s QJL residual stage exists.
 
