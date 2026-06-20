@@ -13,7 +13,7 @@
 
 \title{\textbf{Vector Compression for High-Dimensional Data}\\[0.4em]
 \large A survey of linear-algebra compression methods with an honest retrieval evaluation}
-\author{MATH 5110 --- Applied Linear Algebra\\
+\author{MATH 5110, Applied Linear Algebra\\
 \href{https://github.com/claytomode/math5110-vector-compression}{\texttt{github.com/claytomode/math5110-vector-compression}}}
 \date{}
 
@@ -22,7 +22,7 @@
 
 \begin{abstract}
 \noindent
-Modern AI systems store billions of high-dimensional vectors --- text embeddings, attention key/value caches, and retrieval indexes --- whose footprint scales as $n \cdot d \cdot (\text{bits per dimension})$. This paper surveys four classical linear-algebra tools for shrinking such vectors (Johnson--Lindenstrauss random projection, truncated SVD, 1-bit sign quantization, and uniform scalar quantization) and a recent two-stage method, TurboQuant, that combines an MSE-optimal scalar quantizer with a 1-bit quantized-JL residual correction. We implement pedagogical versions of each method in NumPy and evaluate them not only on geometric distortion but on a realistic retrieval task: a 1{,}380-chunk retrieval-augmented-generation (RAG) index built from a linear-algebra textbook, queried by 300 auto-generated questions and scored against full-precision ground truth. Our central finding is that \emph{distance preservation does not imply rank preservation}: Johnson--Lindenstrauss preserves pairwise geometry yet retains only 39\% of the true top-3 neighbors, while a two-line scalar quantizer at 4 bits retains 93\%. TurboQuant wins decisively at aggressive bit budgets (76\% vs 63\% top-3 overlap against scalar at matched stage-1 bits), but plain scalar quantization is the stronger choice once 4--8 bits per dimension are affordable. We argue that compression methods must be compared on \emph{measured} bits per dimension and on a \emph{retrieval} metric, not on nominal labels or distance error alone.
+Modern AI systems store billions of high-dimensional vectors (text embeddings, attention key/value caches, and retrieval indexes) whose footprint scales as $n \cdot d \cdot (\text{bits per dimension})$. This paper surveys four classical linear-algebra tools for shrinking such vectors (Johnson--Lindenstrauss random projection, truncated SVD, 1-bit sign quantization, and uniform scalar quantization) and a recent two-stage method, TurboQuant, that combines an MSE-optimal scalar quantizer with a 1-bit quantized-JL residual correction. We implement pedagogical versions of each method in NumPy and evaluate them not only on geometric distortion but on a realistic retrieval task: a 1{,}380-chunk retrieval-augmented-generation (RAG) index built from a linear-algebra textbook, queried by 300 auto-generated questions and scored against full-precision ground truth. Our central finding is that \emph{distance preservation does not imply rank preservation}: Johnson--Lindenstrauss preserves pairwise geometry yet retains only 39\% of the true top-3 neighbors, while a two-line scalar quantizer at 4 bits retains 93\%. TurboQuant wins decisively at aggressive bit budgets (76\% vs 63\% top-3 overlap against scalar at matched stage-1 bits), but plain scalar quantization is the stronger choice once 4--8 bits per dimension are affordable. We argue that compression methods must be compared on \emph{measured} bits per dimension and on a \emph{retrieval} metric, not on nominal labels or distance error alone.
 \end{abstract}
 
 \section{Introduction}
@@ -36,9 +36,9 @@ Reducing any factor without destroying the geometry that downstream tasks depend
 
 This project has three parts, mirroring the course structure:
 \begin{itemize}
-  \item \textbf{Part 1 --- Survey.} The linear algebra of four compression families plus the TurboQuant pipeline.
-  \item \textbf{Part 2 --- Computation.} NumPy implementations and two metric families: geometric distortion and retrieval overlap.
-  \item \textbf{Part 3 --- Application.} A compressed textbook RAG index with a 300-query automatic evaluation and a live search UI.
+  \item \textbf{Part 1 (Survey).} The linear algebra of four compression families plus the TurboQuant pipeline.
+  \item \textbf{Part 2 (Computation).} NumPy implementations and two metric families: geometric distortion and retrieval overlap.
+  \item \textbf{Part 3 (Application).} A compressed textbook RAG index with a 300-query automatic evaluation and a live search UI.
 \end{itemize}
 
 \paragraph{Contributions.}
@@ -54,41 +54,63 @@ The Johnson--Lindenstrauss (JL) lemma states that $n$ points in $\mathbb{R}^d$ c
 \begin{equation}
 k = O\!\left(\varepsilon^{-2} \log n\right).
 \end{equation}
-Critically, $k$ depends on the number of points and the tolerance, \emph{not} on the ambient dimension $d$. We use the standard Gaussian construction: a random matrix $R \in \mathbb{R}^{k \times d}$ with independent entries $R_{ij} \sim \mathcal{N}(0, 1/k)$, applied as a sketch
+Critically, $k$ depends on the number of points and the tolerance, not on the ambient dimension $d$. We use the standard Gaussian construction: a random matrix $R \in \mathbb{R}^{k \times d}$ with independent entries $R_{ij} \sim \mathcal{N}(0, 1/k)$, applied as a sketch $y = R x \in \mathbb{R}^k$.
+
+\paragraph{Why distances are preserved.} Fix a vector $x$ and examine the squared sketch length. Each coordinate $y_i = \sum_j R_{ij} x_j$ is Gaussian with mean $0$ and variance $\|x\|^2/k$, so
 \begin{equation}
-y = R x \in \mathbb{R}^k.
+\mathbb{E}\,\|Rx\|^2 = \sum_{i=1}^{k} \mathbb{E}\,y_i^2 = k \cdot \frac{\|x\|^2}{k} = \|x\|^2,
 \end{equation}
-The $1/\sqrt{k}$ scaling makes $R$ a near-isometry in expectation: $\mathbb{E}\,\|Rx\|^2 = \|x\|^2$. Because the map is linear and applied identically to keys and queries, inner products are preserved in expectation, and concentration of measure gives the $(1 \pm \varepsilon)$ guarantee with high probability.
+which makes the projection an isometry in expectation. The quantity $\|Rx\|^2$ is an average of $k$ independent squared Gaussians, a $\chi^2$ random variable, and a standard concentration bound gives
+\begin{equation}
+\Pr\!\left[\,\bigl|\,\|Rx\|^2 - \|x\|^2\,\bigr| \ge \varepsilon \|x\|^2 \,\right] \le 2\exp\!\left(-\frac{k}{4}\bigl(\varepsilon^2 - \varepsilon^3\bigr)\right).
+\end{equation}
+Applying this to each of the $\binom{n}{2}$ difference vectors $x_i - x_j$ and taking a union bound, the failure probability is below $1$ as soon as $k = O(\varepsilon^{-2}\log n)$, which is the lemma. Inner products follow from the polarization identity
+\begin{equation}
+\langle x, y\rangle = \tfrac14\bigl(\|x+y\|^2 - \|x-y\|^2\bigr);
+\end{equation}
+since the sketch preserves every norm on the right-hand side, it preserves the dot product on the left, and therefore cosine similarity, in expectation.
 
-\paragraph{How it works.} Each output coordinate $y_i = \sum_j R_{ij} x_j$ is a random weighted sum of all $d$ input coordinates. No single output depends on the data --- the matrix $R$ is drawn before seeing any vector --- yet averaging over $k$ independent random combinations makes the sketch length concentrate tightly around the true length, a law-of-large-numbers effect that sharpens as $k$ grows. This is why the required dimension depends only on the point count $n$ and the tolerance $\varepsilon$, never on the original dimension $d$: JL is a \emph{data-oblivious} compressor.
-
-In our setting $d = 256$, $n = 1{,}380$, and a tolerance $\varepsilon = 0.3$ yields a target dimension of roughly $k \approx 128$, i.e. a nominal $2\times$ compression. The key conceptual point --- confirmed dramatically in our results --- is that \textbf{distance preservation is not rank preservation}. JL controls the magnitude of pairwise distances, but every sketch coordinate is a pure mixture, so the fine angular differences that separate near-duplicate neighbors are buried under projection noise. The lemma promises the \emph{size} of distances, not the \emph{order} of the nearest neighbors, and top-$k$ retrieval needs the order.
+\paragraph{Why ranking still breaks.} Each output coordinate is a random mixture of all $d$ inputs, drawn before any data is seen, so JL is a \emph{data-oblivious} compressor: the required $k$ depends only on $n$ and $\varepsilon$, never on $d$. Averaging $k$ such mixtures concentrates the sketch length, but the residual error keeps a fixed relative scale of order $\varepsilon$. Top-$k$ retrieval depends on the \emph{order} of distances, not their size, and when the true nearest neighbors are separated by gaps smaller than this $\varepsilon$ noise floor the projection reorders them. In our setting $d = 256$, $n = 1{,}380$, and $\varepsilon = 0.3$ give $k \approx 128$ (a nominal $2\times$ compression); the lemma then guarantees the magnitude of pairwise distances at that tolerance while promising nothing about their order. This is the gap between \textbf{distance preservation and rank preservation} that our experiments expose.
 
 \subsection{Truncated (rank-\texorpdfstring{$k$}{k}) SVD}
 
-The singular value decomposition factors the stacked embedding matrix $A \in \mathbb{R}^{n \times d}$ as $A = U \Sigma V^\top$ and truncates to the top $k$ singular directions:
+The singular value decomposition factors the stacked embedding matrix $A \in \mathbb{R}^{n \times d}$ as $A = U \Sigma V^\top$, with orthonormal $U$ and $V$ and singular values $\sigma_1 \ge \sigma_2 \ge \cdots \ge 0$ on the diagonal of $\Sigma$. Truncating to the top $k$ directions gives
 \begin{equation}
-A_k = U_k \Sigma_k V_k^\top.
+A_k = U_k \Sigma_k V_k^\top = \sum_{i=1}^{k} \sigma_i\, u_i v_i^\top.
 \end{equation}
-The right singular vectors $V_k \in \mathbb{R}^{d \times k}$ span the $k$-dimensional subspace of maximum variance across the corpus. Each vector is compressed by projection into that subspace and reconstructed back into $\mathbb{R}^d$:
+The right singular vectors $V_k \in \mathbb{R}^{d \times k}$ span the $k$-dimensional subspace of maximum variance across the corpus. Each vector is compressed by projecting into that subspace and reconstructed by mapping back:
 \begin{equation}
 z = V_k^\top x \in \mathbb{R}^k, \qquad \hat{x} = V_k V_k^\top x.
 \end{equation}
-\paragraph{How it works.} Where JL is data-oblivious, SVD is data-optimal: it spends its $k$ dimensions on exactly the directions in which the corpus actually varies. The top singular vectors are the principal axes of the cloud of embeddings, and projecting onto them keeps the most ``energy'' (variance) recoverable from $k$ numbers. By the Eckart--Young theorem, $A_k$ is the optimal rank-$k$ approximation of $A$ in both the Frobenius and spectral norms --- no other linear rank-$k$ compressor achieves smaller reconstruction error.
+The operator $P_k = V_k V_k^\top$ is an orthogonal projector, satisfying $P_k^2 = P_k = P_k^\top$, so the residual $x - \hat{x}$ is orthogonal to the retained subspace and the Pythagorean relation $\|x\|^2 = \|\hat{x}\|^2 + \|x - \hat{x}\|^2$ holds exactly.
 
-Two caveats temper this optimality in practice. First, the basis $V_k$ must be fit on the full corpus in advance, so out-of-distribution vectors lose alignment, and a query's relevant signal may live partly in the discarded tail --- which is why aggressive truncation (rank-8, rank-16) shows the largest distance error in our results. Second, storage is not simply $k$ floats per vector: the shared basis $V_k$ and the per-vector coefficients both count, so the \emph{measured} compression ratio is lower than the nominal $d/k$. For $k = 64$ the nominal ratio is $4\times$, but amortized storage yields about $3.4\times$.
+\paragraph{Optimality and exact error.} Where JL is data-oblivious, SVD is data-optimal: it spends its $k$ dimensions on exactly the directions in which the corpus varies most. By the Eckart--Young theorem, $A_k$ is the best rank-$k$ approximation of $A$ in both the Frobenius and spectral norms, with error fixed precisely by the discarded singular values,
+\begin{equation}
+\|A - A_k\|_F^2 = \sum_{i > k} \sigma_i^2, \qquad \|A - A_k\|_2 = \sigma_{k+1}.
+\end{equation}
+The fraction of energy (variance) retained is $\sum_{i \le k}\sigma_i^2 \big/ \sum_i \sigma_i^2$, so the appropriate $k$ can be read directly off the singular-value spectrum. Inner products are preserved exactly within the subspace, because $\langle V_k^\top x, V_k^\top y\rangle = x^\top P_k y = \langle \hat{x}, y\rangle$; all distortion comes from the part of the signal that lives in the discarded tail.
+
+\paragraph{Two practical caveats.} First, the basis $V_k$ must be fit on the full corpus in advance, so out-of-distribution vectors lose alignment and a query's relevant signal may sit partly in the truncated tail. This is why aggressive truncation (rank-8, rank-16) shows the largest distance error in our results. Second, storage is not simply $k$ floats per vector: the shared basis $V_k$ costs $dk$ floats and the coefficients cost $nk$, so the \emph{measured} compression ratio falls below the nominal $d/k$. For $k = 64$ the nominal ratio is $4\times$ but amortized storage yields about $3.4\times$.
 
 \subsection{Sign (1-bit) quantization and QJL scoring}
 
-The most aggressive linear compressor keeps only the sign of each coordinate:
+The most aggressive linear compressor keeps only the sign of each coordinate,
 \begin{equation}
 \hat{x} = \operatorname{sign}(x) \in \{-1, +1\}^d,
 \end{equation}
-collapsing 32 bits per coordinate to 1, a nominal $32\times$ reduction. Scoring against a full-precision query recovers an estimate of the inner product. The quantized-JL (QJL) refinement first applies a random rotation $R$, then quantizes; the angle between rotated sign vectors encodes the original cosine similarity:
+collapsing 32 bits per coordinate to 1, a nominal $32\times$ reduction. The geometric content of a sign vector is an angle, not a length: every $\hat{x}$ has fixed norm $\sqrt{d}$, so magnitude is discarded and only direction survives.
+
+\paragraph{Signs encode angles.} For a random hyperplane with normal $g \sim \mathcal{N}(0, I_d)$, the probability that two vectors fall on opposite sides is exactly proportional to the angle between them (the Goemans--Williamson identity):
 \begin{equation}
-\operatorname{score}(q, \hat{x}) = \frac{\operatorname{sign}(Rx)^\top (Rq)}{\sqrt{d}} \approx \cos(x, q).
+\Pr\!\left[\operatorname{sign}(g^\top x) \ne \operatorname{sign}(g^\top y)\right] = \frac{\theta(x,y)}{\pi}, \qquad \theta(x,y) = \arccos\frac{\langle x, y\rangle}{\|x\|\,\|y\|}.
 \end{equation}
-\paragraph{How it works.} Recording $\operatorname{sign}(x)$ stores which side of each coordinate axis --- or, after a random rotation, each random hyperplane --- the vector falls on. Two vectors pointing in similar directions agree on most of these signs, so the number of \emph{agreeing bits} (a Hamming distance) is a cheap estimator of the angle between them; this is the same idea as sign-random-projection locality-sensitive hashing. One bit per coordinate localizes direction coarsely and cheaply, but it cannot distinguish vectors that already sit close together on the sphere: sign quantization works well when relevant vectors are well separated, and it fails when the true top-$k$ items cluster tightly --- exactly the regime where retrieval needs the most angular precision.
+Equivalently, sign-quantizing both vectors gives $\mathbb{E}\bigl[\tfrac1k \operatorname{sign}(Rx)^\top \operatorname{sign}(Ry)\bigr] = 1 - \tfrac{2}{\pi}\theta(x,y)$, so the dot product of sign codes is a monotone function of the angle and recovers cosine ordering. The quantized-JL (QJL) refinement keeps the query in full precision to cut variance. Using the Gaussian identity $\mathbb{E}\,[\,g\,\operatorname{sign}(g^\top x)] = \sqrt{2/\pi}\,x/\|x\|$, the estimator
+\begin{equation}
+\operatorname{score}(q, x) = \sqrt{\tfrac{\pi}{2}}\cdot\frac{(Rq)^\top \operatorname{sign}(Rx)}{k} \;\approx\; \frac{\langle q, x\rangle}{\|x\|}
+\end{equation}
+is unbiased for cosine similarity. Our \texttt{sign\_1bit} method uses the axis-aligned special case ($R = I$) and restores scale with the stored norm, scoring $\|x\|\,\operatorname{sign}(x)^\top q / \sqrt{d}$.
+
+\paragraph{Where it fails.} One bit localizes direction only coarsely, and the estimator's variance is fixed regardless of how close two vectors are. Sign quantization therefore works well when relevant vectors are well spread out on the sphere and fails when the true top-$k$ items cluster tightly, which is exactly the regime where retrieval needs the most angular precision.
 
 \subsection{Uniform scalar quantization}
 
@@ -96,46 +118,63 @@ Scalar quantization divides each coordinate's range into $2^b$ equal buckets and
 \begin{equation}
 \Delta = \frac{x_{\max} - x_{\min}}{2^b - 1},
 \end{equation}
-and the worst-case rounding error per coordinate is $\Delta/2$, giving the reconstruction bound
+and the worst-case rounding error per coordinate is $\Delta/2$, giving the deterministic reconstruction bound
 \begin{equation}
 \|x - \hat{x}\|^2 \le d \cdot \left(\frac{\Delta}{2}\right)^2.
 \end{equation}
-Each additional bit halves $\Delta$ and therefore halves the per-coordinate error, producing a clean and predictable quality-versus-bits tradeoff. The compression ratios are exact: $b = 8$ gives $4\times$, $b = 4$ gives $8\times$, and $b = 2$ gives $16\times$.
 
-\paragraph{How it works.} Scalar quantization is the most direct method: keep every coordinate, just store it coarsely on a per-dimension grid. Because it never mixes coordinates, it adds no projection noise of the kind JL suffers --- only independent rounding error that shrinks geometrically with the bit budget. That is why it is such a strong baseline: by 4 bits the grid is already fine enough that the cosine ranking of neighbors is barely perturbed, and at 8 bits it is effectively lossless. Its weakness shows only at 2 bits, where the grid is coarse and the rounding error is \emph{correlated} across a vector's coordinates, systematically nudging its direction --- precisely the bias that TurboQuant's residual stage is designed to remove. As our results show, scalar quantization at 4--8 bits matches or beats far more elaborate methods.
+\paragraph{Error scales as $4^{-b}$.} Modelling the rounding error of each coordinate as uniform on $[-\Delta/2, \Delta/2]$ gives the standard quantization-noise variance
+\begin{equation}
+\mathbb{E}\,(x_j - \hat{x}_j)^2 = \frac{\Delta^2}{12}, \qquad \mathbb{E}\,\|x - \hat{x}\|^2 = \frac{d\,\Delta^2}{12}.
+\end{equation}
+Since $\Delta \propto 2^{-b}$, the mean-squared error falls as $4^{-b}$: each extra bit cuts the error by a factor of four (a $6\,\mathrm{dB}$ improvement per bit), a clean and predictable quality-versus-bits tradeoff. The compression ratios are exact: $b = 8$ gives $4\times$, $b = 4$ gives $8\times$, and $b = 2$ gives $16\times$. Writing the rounding error as $e = \hat{x} - x$, the scored inner product is $\langle q, \hat{x}\rangle = \langle q, x\rangle + \langle q, e\rangle$, so quantization is harmless precisely when the error $e$ is small and uncorrelated with the query direction.
+
+\paragraph{Why it is a strong baseline.} Scalar quantization keeps every coordinate and never mixes them, so it adds no projection noise of the kind JL suffers, only the independent rounding error above. By 4 bits the grid is fine enough that the cosine ranking of neighbors is barely perturbed, and at 8 bits it is effectively lossless. Its weakness appears only at 2 bits, where the grid is coarse and the error $e$ becomes large and correlated across a vector's coordinates, systematically tilting its direction. That directional bias is exactly what TurboQuant's residual stage is built to remove, and as our results show, scalar quantization at 4--8 bits already matches or beats far more elaborate methods.
 
 \subsection{TurboQuant: a two-stage pipeline}
 
-TurboQuant (Zandieh et al., ICLR 2026) is a \emph{data-oblivious} quantizer that is provably near-optimal for both mean-squared-error (MSE) and \emph{inner-product} distortion. Its starting observation is that an MSE-optimal quantizer is a \emph{biased} inner-product estimator --- minimizing reconstruction error and preserving dot products are different objectives --- so a single quantizer cannot serve retrieval well. TurboQuant bridges the gap with a two-stage construction. For a target budget of $b$ bits per coordinate:
+TurboQuant (Zandieh et al., ICLR 2026) is a \emph{data-oblivious} quantizer that is provably near-optimal for both mean-squared-error (MSE) and inner-product distortion. Its starting observation is that an MSE-optimal quantizer is a \emph{biased} inner-product estimator: minimizing reconstruction error and preserving dot products are different objectives, so a single quantizer cannot serve retrieval well. TurboQuant bridges the gap with a two-stage construction. For a target budget of $b$ bits per coordinate:
 \begin{itemize}
-  \item \textbf{Stage 0 --- Rotate.} Each vector is multiplied by a random rotation $\Pi$ (e.g. the $Q$ factor of a random Gaussian matrix). For a vector on the unit sphere this makes every coordinate follow the same (scaled) Beta distribution --- converging to $\mathcal{N}(0, 1/d)$ in high dimension --- and renders distinct coordinates nearly independent, so each can be quantized on its own.
-  \item \textbf{Stage 1 --- MSE-optimal scalar quantization ($b-1$ bits).} Because the per-coordinate distribution is known in closed form, TurboQuant precomputes the \textbf{Max--Lloyd} optimal scalar quantizer for that Beta distribution (a continuous 1-D $k$-means problem) and applies it to each rotated coordinate. This minimizes the $L_2$ norm of the residual $r = x - \hat{x}_1$ but, alone, biases inner products.
-  \item \textbf{Stage 2 --- 1-bit QJL residual.} The residual is captured with the Quantized Johnson--Lindenstrauss transform: store $z = \operatorname{sign}(S r)$ for a random Gaussian sketch $S$, one bit per coordinate. Its inverse is an \emph{unbiased} inner-product estimator, so adding it back corrects the Stage-1 bias for one extra bit.
+  \item \textbf{Stage 0 (rotate).} Each vector is multiplied by a random rotation $\Pi$, for instance the $Q$ factor of a random Gaussian matrix. For a vector on the unit sphere this makes every coordinate follow the same scaled Beta distribution, which converges to $\mathcal{N}(0, 1/d)$ in high dimension, and renders distinct coordinates nearly independent so each can be quantized on its own.
+  \item \textbf{Stage 1 (MSE-optimal scalar quantization, $b-1$ bits).} Because the per-coordinate distribution is known in closed form, TurboQuant precomputes the \textbf{Max--Lloyd} optimal scalar quantizer for that Beta distribution, the solution of a continuous one-dimensional $k$-means problem, and applies it to each rotated coordinate. This minimizes the $L_2$ norm of the residual $r = x - \hat{x}_1$ but, on its own, biases inner products.
+  \item \textbf{Stage 2 (1-bit QJL residual).} The residual is captured with the Quantized Johnson--Lindenstrauss transform: store $z = \operatorname{sign}(S r)$ for a random Gaussian sketch $S$, one bit per coordinate. Its inverse is an \emph{unbiased} inner-product estimator, so adding it back corrects the Stage-1 bias for one extra bit.
 \end{itemize}
 The full estimate uses a full-precision query against both stages,
 \begin{equation}
-\operatorname{score}(q, x) \;=\; q^\top \hat{x}_1 \;+\; \frac{\sqrt{\pi/2}}{d}\,(Sq)^\top \operatorname{sign}(S r),
+\operatorname{score}(q, x) \;=\; q^\top \hat{x}_1 \;+\; \frac{\sqrt{\pi/2}}{d}\,\|r\|\,(Sq)^\top \operatorname{sign}(S r),
 \end{equation}
-which TurboQuant proves is unbiased ($\mathbb{E}[\,\cdot\,] = \langle q, x\rangle$) with near-optimal variance across all bit-widths. Note the bit accounting: a budget of $b$ buys $b-1$ Stage-1 bits \emph{plus} the 1-bit residual --- the residual is carved out of the budget, not added on top.
+which TurboQuant proves is unbiased, $\mathbb{E}[\operatorname{score}(q,x)] = \langle q, x\rangle$, with near-optimal variance across all bit-widths. The bit accounting matters: a budget of $b$ buys $b-1$ Stage-1 bits plus the 1-bit residual, so the residual is carved out of the budget rather than added on top.
 
-\paragraph{How it works.} TurboQuant is best read as a correction layer bolted onto scalar quantization. The rotation (Stage 0) destroys any coordinate system in which energy is concentrated on a few axes and gives every coordinate the same known distribution, so a per-coordinate scalar quantizer is both optimal and cheap. Stage 1 then leaves behind a structured error --- the same correlated, direction-biasing residual that hurts plain scalar quantization at low bit budgets. The insight is that this residual, while not negligible, is \emph{small in norm and roughly isotropic} after rotation, so it is exactly the kind of vector a 1-bit QJL sketch estimates well \emph{without bias}. Spending one bit per coordinate on the residual's inner-product contribution removes most of the Stage-1 bias without storing the residual itself. The payoff is largest precisely where scalar quantization is weakest (2--3 bits) and shrinks once the Stage-1 quantizer is already accurate (4+ bits), where the rotation and residual become overhead.
+\paragraph{Why the two stages help.} The rotation (Stage 0) destroys any coordinate system in which energy is concentrated on a few axes and gives every coordinate the same known distribution, so a per-coordinate scalar quantizer is both optimal and cheap. Stage 1 then leaves behind a structured error, the same correlated, direction-biasing residual that hurts plain scalar quantization at low bit budgets. The key fact is that this residual, while not negligible, is small in norm and roughly isotropic after rotation, so it is exactly the kind of vector a 1-bit QJL sketch estimates well \emph{without bias}. Spending one bit per coordinate on the residual's inner-product contribution removes most of the Stage-1 bias without storing the residual itself. The payoff is largest where scalar quantization is weakest (2--3 bits) and shrinks once the Stage-1 quantizer is already accurate (4+ bits), where the rotation and residual become overhead.
 
-\paragraph{Our pedagogical implementation, and why the simplifications are defensible here.} TurboQuant's most intricate machinery is engineered for two conditions our study does not face: \emph{adversarial worst-case inputs}, and applications such as KV-cache attention where the \emph{absolute} value of each inner product is fed through a softmax. Our setting is gentler --- a fixed corpus of real embeddings that are already close to isotropic, scored by \emph{relative} rank --- and that gap is exactly what each simplification trades on.
-\begin{itemize}
-  \item \textbf{Cheap rotation instead of a dense one.} A full $d \times d$ random rotation costs $O(d^2)$ time and storage per use, which is why even the production method uses fast structured transforms rather than a literal Haar matrix. The rotation's theoretical role is to rescue worst-case inputs whose energy piles onto a few coordinates, but \texttt{text-embedding-3-small} vectors are already near-isotropic, so most of that work is done before we begin. An $O(d)$ permutation-plus-sign stand-in keeps the cost negligible; the residual stage then absorbs whatever decorrelation it fails to achieve.
-  \item \textbf{Uniform quantization instead of Max--Lloyd codebooks.} Max--Lloyd is optimal only in the asymptotic, exactly-Beta limit, and its measured edge over uniform quantization on near-Gaussian sources is a fraction of a bit. The decisive reason, though, is experimental control: our plain \texttt{scalar} baseline uses the \emph{identical} uniform quantizer, so any gain we attribute to TurboQuant comes provably from the residual-correction stage and not from a better Stage-1 codebook --- the one variable we want to isolate.
-  \item \textbf{Residual signs instead of the full QJL projection.} The random sketch $S$ and the $\sqrt{\pi/2}$ factor exist to make the residual estimate \emph{unbiased with dimension-free variance for any adversarial query direction} --- a guarantee that matters when the raw inner-product magnitude drives an attention softmax. Retrieval, by contrast, only needs the correction to nudge close neighbors into the right order, and we already retain the dominant magnitude term, the per-vector residual norm $\|r\|$. Dropping $S$ avoids another $O(d^2)$ transform and folds the remaining calibration into a single $1/\sqrt{d}$ weight; our results below confirm empirically that this stripped-down correction still recovers most of the low-bit benefit (76\% vs.\ 63\% at matched Stage-1 bits).
-  \item \textbf{Labelling by Stage-1 bits.} We name configurations by Stage-1 fidelity and add the residual bit on top rather than carving it from the budget. Because every figure and table reports \emph{measured} bits per dimension, this convention changes no comparison --- it only keeps the bit ladder legible.
-\end{itemize}
-The mechanism under study --- a coarse first stage corrected by a 1-bit residual --- is therefore faithful; what we trade away (provable optimality and unbiasedness) is precisely the part that buys worst-case and absolute-magnitude guarantees we do not need for ranked retrieval.
+\paragraph{Our implementation of TurboQuant.} We keep the two-stage skeleton but replace each component with a simpler, explicit operation, written out here in full. Let $P$ be a \emph{signed permutation matrix}: a coordinate permutation composed with random $\pm1$ sign flips. It is orthogonal, $P^\top P = I$, and costs only $O(d)$ to store and apply.
+\begin{description}
+  \item[Stage 0 (rotate).] $x' = P x$.
+  \item[Stage 1 (uniform quantize).] With per-coordinate range $[\ell_j, h_j]$ measured over the corpus and $L = 2^{b} - 1$ levels,
+  \begin{equation}
+  c_j = \operatorname{round}\!\left(\frac{x'_j - \ell_j}{h_j - \ell_j}\,L\right), \qquad \hat{x}'_j = \ell_j + \frac{c_j}{L}\,(h_j - \ell_j),
+  \end{equation}
+  and we map back to the original frame with $\hat{x}_1 = P^\top \hat{x}'$.
+  \item[Stage 2 (residual).] $r = x - \hat{x}_1$, of which we store only the per-coordinate signs $\operatorname{sign}(r) \in \{\pm1\}^d$ and the scalar norm $\|r\|$.
+\end{description}
+The query stays in full precision, and the score is the sum of a stage-1 dot product and a 1-bit residual correction,
+\begin{equation}
+\operatorname{score}(q, x) = \underbrace{q^\top \hat{x}_1}_{\text{stage-1 reconstruction}} \;+\; \underbrace{\frac{\|r\|}{\sqrt{d}}\,\operatorname{sign}(r)^\top q}_{\text{1-bit residual correction}}.
+\end{equation}
 
-The consequence is honesty about bits: our \texttt{turboquant\_2bit} actually consumes about $3.2$ bits per dimension (two Stage-1 bits, one residual bit, plus amortized rotation and norm metadata), not the nominal $2.0$. This distinction is essential when comparing methods.
+\paragraph{Why the residual term works.} The correction estimates the true residual contribution $\langle q, r\rangle = \sum_j q_j r_j$ from one bit per coordinate. Writing each coordinate as $r_j = \operatorname{sign}(r_j)\,|r_j|$,
+\begin{equation}
+\langle q, r\rangle = \sum_j q_j \operatorname{sign}(r_j)\,|r_j| \;\approx\; \frac{\|r\|}{\sqrt{d}}\sum_j q_j \operatorname{sign}(r_j),
+\end{equation}
+where the approximation replaces each magnitude $|r_j|$ by the root-mean-square coordinate magnitude $\|r\|/\sqrt{d}$, using $\sum_j r_j^2 = \|r\|^2$. The substitution is exact when the residual coordinates have equal magnitude and accurate when they are close, which is precisely the near-isotropy the rotation is meant to induce. We therefore keep the residual's dominant scale $\|r\|$ exactly and quantize only its direction. Relative to the published QJL estimator we have set the sketch $S = I$ and dropped the $\sqrt{\pi/2}$ constant; the price is a biased but correctly oriented correction, and the saving is one fewer $O(d^2)$ transform.
+
+\paragraph{Why these simplifications are defensible here.} TurboQuant's most intricate machinery targets two conditions our study does not face: adversarial worst-case inputs, and applications such as KV-cache attention where the absolute value of each inner product feeds a softmax. Our setting is gentler, a fixed corpus of real embeddings that are already close to isotropic and scored by relative rank, and that gap is what each simplification trades on. The cheap signed-permutation rotation avoids the $O(d^2)$ cost of a dense rotation, whose job (spreading concentrated energy) is largely already done by the embedding model. Uniform quantization in place of Max--Lloyd codebooks costs a fraction of a bit on near-Gaussian data, and it buys experimental control: the plain \texttt{scalar} baseline uses the identical quantizer, so any measured TurboQuant gain is attributable to the residual stage alone. Taking residual signs directly ($S = I$) forgoes the unbiasedness guarantee, which matters for absolute-magnitude attention but not for ranked retrieval, and our results below confirm the stripped-down correction still recovers most of the low-bit benefit (76\% versus 63\% at matched Stage-1 bits). Finally, we label configurations by Stage-1 bits and add the residual bit on top rather than carving it out; since every figure reports \emph{measured} bits per dimension, this changes no comparison. The consequence is honesty about bits: our \texttt{turboquant\_2bit} actually consumes about $3.2$ bits per dimension (two Stage-1 bits, one residual bit, plus amortized rotation and norm metadata), not the nominal $2.0$.
 
 \section{Methods and experimental setup}
 
 \subsection{Corpus and embeddings}
 
-The retrieval corpus is the source text of Professor He Wang's MATH 5110 textbook, \emph{Advanced Linear Algebra for AI}, pulled directly from its public Quarto (\texttt{.qmd}) repository. Chapters are split on section boundaries and then into overlapping character windows (900 characters per chunk, 120-character overlap), yielding \textbf{1{,}380 chunks}. Each chunk is embedded with \texttt{text-embedding-3-small} at $d = 256$. Retrieval is ranked by \textbf{cosine similarity} throughout --- the scoring functions normalize vectors at comparison time --- so ranking depends on direction, not magnitude.
+The retrieval corpus is the source text of Professor He Wang's MATH 5110 textbook, \emph{Advanced Linear Algebra for AI}, pulled directly from its public Quarto (\texttt{.qmd}) repository. Chapters are split on section boundaries and then into overlapping character windows (900 characters per chunk, 120-character overlap), yielding \textbf{1{,}380 chunks}. Each chunk is embedded with \texttt{text-embedding-3-small} at $d = 256$. Retrieval is ranked by \textbf{cosine similarity} throughout (the scoring functions normalize vectors at comparison time), so ranking depends on direction, not magnitude.
 
 \subsection{Evaluation queries and metric}
 
@@ -143,19 +182,21 @@ We auto-generate \textbf{300 stratified queries} by sampling across chunks (usin
 \begin{equation}
 \text{overlap@}k = \frac{\bigl|\,\mathrm{TopK}_{\text{full}} \cap \mathrm{TopK}_{\text{comp}}\,\bigr|}{k}.
 \end{equation}
-This is recall of the true neighbors, and because it is a set intersection it is rank-blind within the top-$k$ window --- appropriate when a language model consumes any of the retrieved passages, not only the first. We report $k = 3$ for RAG and $k = 10$ for the token study. We also report \textbf{mean relative pairwise distance error} to measure geometry directly, and a \textbf{drift breakdown} classifying each query as a perfect match, partial drift, or zero overlap.
+This is recall of the true neighbors, and because it is a set intersection it is rank-blind within the top-$k$ window, which is appropriate when a language model consumes any of the retrieved passages, not only the first. We report $k = 3$ for RAG and $k = 10$ for the token study. We also report \textbf{mean relative pairwise distance error} to measure geometry directly, and a \textbf{drift breakdown} classifying each query as a perfect match, partial drift, or zero overlap.
 
-\paragraph{Two different geometries.} It is worth being explicit that our two quality measures use \emph{different} notions of closeness, and they are not interchangeable. The geometric-distortion metric is built on \textbf{Euclidean ($L_2$) distance}: for each method we compute mean relative pairwise distance error, $\bigl|\,\|x_i - x_j\| - \|c(x_i) - c(x_j)\|\,\bigr| / \|x_i - x_j\|$ averaged over pairs, which is exactly the quantity the Johnson--Lindenstrauss lemma bounds. Retrieval, by contrast, ranks neighbors by \textbf{cosine similarity}, which depends only on the \emph{angle} between vectors. Because our embeddings are not unit-normalized before compression, these two views do not coincide: $L_2$ distance mixes angle and magnitude, while cosine discards magnitude entirely. A compressor can therefore shrink Euclidean distance error while still scrambling the angular order that retrieval depends on --- which is precisely the JL story below. We deliberately report both so the gap between ``preserving geometry'' and ``preserving rankings'' is visible rather than assumed away.
+\paragraph{Two different geometries.} It is worth being explicit that our two quality measures use \emph{different} notions of closeness, and they are not interchangeable. The geometric-distortion metric is built on \textbf{Euclidean ($L_2$) distance}: for each method we compute mean relative pairwise distance error, $\bigl|\,\|x_i - x_j\| - \|c(x_i) - c(x_j)\|\,\bigr| / \|x_i - x_j\|$ averaged over pairs, which is exactly the quantity the Johnson--Lindenstrauss lemma bounds. Retrieval, by contrast, ranks neighbors by \textbf{cosine similarity}, which depends only on the \emph{angle} between vectors. Because our embeddings are not unit-normalized before compression, these two views do not coincide: $L_2$ distance mixes angle and magnitude, while cosine discards magnitude entirely. A compressor can therefore shrink Euclidean distance error while still scrambling the angular order that retrieval depends on, which is precisely the JL story below. We deliberately report both so the gap between ``preserving geometry'' and ``preserving rankings'' is visible rather than assumed away.
 
 \subsection{Implementation}
 
+\begin{sloppypar}
 All methods are implemented from scratch in NumPy, sharing one embedding matrix and one random seed. The compression families and the bit/dimension ladders evaluated are: \texttt{full\_precision}; \texttt{jl\_\{16,32,64,128\}}; \texttt{rank\_\{8,16,32,64\}}; \texttt{sign\_1bit}; \texttt{scalar\_\{2,3,4,8\}bit}; and \texttt{turboquant\_\{2,3,4,8\}bit}. The same scoring functions back a FastAPI + SvelteKit web application that lets a user search the book and compare indexes side by side.
+\end{sloppypar}
 
 \section{Results}
 
 \subsection{Geometric distortion}
 
-Figure~\ref{fig:distance} reports mean relative pairwise \emph{Euclidean} distance error (lower is better). The 8-bit methods are effectively lossless --- \texttt{turboquant\_8bit} at $0.0002$ and \texttt{scalar\_8bit} at $0.0003$ are indistinguishable from full precision at $0.0000$. The largest distortions come from aggressive rank truncation: \texttt{rank\_16} and \texttt{rank\_8} sit at the high end because discarding singular directions removes real signal that the inner product depends on. This figure measures geometry only; the next two figures show that good geometry does not guarantee good retrieval.
+Figure~\ref{fig:distance} reports mean relative pairwise \emph{Euclidean} distance error (lower is better). The 8-bit methods are effectively lossless: \texttt{turboquant\_8bit} at $0.0002$ and \texttt{scalar\_8bit} at $0.0003$ are indistinguishable from full precision at $0.0000$. The largest distortions come from aggressive rank truncation: \texttt{rank\_16} and \texttt{rank\_8} sit at the high end because discarding singular directions removes real signal that the inner product depends on. This figure measures geometry only; the next two figures show that good geometry does not guarantee good retrieval.
 
 \begin{figure}[htbp]
   \centering
@@ -192,7 +233,7 @@ Figure~\ref{fig:frontier} plots top-3 overlap (accuracy) against compression rat
   \end{tabular}
 \end{table}
 
-Two facts dominate the frontier. First, the JL points (\texttt{jl\_128}, \texttt{jl\_64}) fall far below it: despite strong distance guarantees, they are the worst retrievers per bit. Second, the choice between TurboQuant and scalar depends on the budget. At aggressive stage-1 bits the residual correction is decisive --- TurboQuant 2-bit reaches 76.1\% versus scalar 2-bit at 62.8\%, a 13-point gain. Once 4 bits are affordable the methods tie on accuracy (93.3\% vs 93.2\%), and scalar wins on the frontier because it avoids TurboQuant's rotation and residual overhead.
+Two facts dominate the frontier. First, the JL points (\texttt{jl\_128}, \texttt{jl\_64}) fall far below it: despite strong distance guarantees, they are the worst retrievers per bit. Second, the choice between TurboQuant and scalar depends on the budget. At aggressive stage-1 bits the residual correction is decisive: TurboQuant 2-bit reaches 76.1\% versus scalar 2-bit at 62.8\%, a 13-point gain. Once 4 bits are affordable the methods tie on accuracy (93.3\% vs 93.2\%), and scalar wins on the frontier because it avoids TurboQuant's rotation and residual overhead.
 
 \begin{figure}[htbp]
   \centering
@@ -228,11 +269,11 @@ On a smaller, easier token-embedding task (recall@10), the ordering is the same:
 
 \section{Limitations}
 
-This study uses one corpus, one embedding model, and one automatically generated query set; absolute numbers will shift with domain, dimension, and query distribution. The TurboQuant implementation is pedagogical: it uses a lightweight permutation-and-sign rotation rather than a dense random rotation, substitutes uniform scalar quantization for the Beta-distribution Max--Lloyd codebooks, and takes residual signs directly instead of applying the full QJL random projection and its $\sqrt{\pi/2}$ debiasing, so it forfeits the optimality and unbiasedness guarantees of the published method (and its PolarQuant key-cache variant). We evaluate retrieval overlap, not end-to-end generation quality, and we do not reproduce language-model KV-cache inference --- the shared object of study is the linear algebra of compressed inner-product search, not the inference stack.
+This study uses one corpus, one embedding model, and one automatically generated query set; absolute numbers will shift with domain, dimension, and query distribution. The TurboQuant implementation is pedagogical: it uses a lightweight permutation-and-sign rotation rather than a dense random rotation, substitutes uniform scalar quantization for the Beta-distribution Max--Lloyd codebooks, and takes residual signs directly instead of applying the full QJL random projection and its $\sqrt{\pi/2}$ debiasing, so it forfeits the optimality and unbiasedness guarantees of the published method (and its PolarQuant key-cache variant). We evaluate retrieval overlap, not end-to-end generation quality, and we do not reproduce language-model KV-cache inference; the shared object of study is the linear algebra of compressed inner-product search, not the inference stack.
 
 \section{Conclusion}
 
-Vector compression is governed by a single product, $n \cdot d \cdot (\text{bits per dimension})$, and by a single geometric requirement, approximate preservation of inner products. We surveyed four classical methods and one modern two-stage pipeline, implemented them from scratch, and evaluated them on a realistic textbook RAG task with full-precision ground truth. The results draw a clean line between geometry and ranking: Johnson--Lindenstrauss preserves distances but not retrieval order, sign quantization is extreme but brittle, truncated SVD is optimal in reconstruction yet costly to store, and scalar quantization is a deceptively strong baseline. TurboQuant's quantized-JL residual earns its overhead only at aggressive bit budgets, where it converts a 1-bit-class compressor into a competitive retriever. The practical recommendation is concise: choose TurboQuant when you must compress below 4 bits per dimension, choose scalar quantization otherwise, and always compare methods on measured bits per dimension against a retrieval metric --- never on nominal labels or distance error alone.
+Vector compression is governed by a single product, $n \cdot d \cdot (\text{bits per dimension})$, and by a single geometric requirement, approximate preservation of inner products. We surveyed four classical methods and one modern two-stage pipeline, implemented them from scratch, and evaluated them on a realistic textbook RAG task with full-precision ground truth. The results draw a clean line between geometry and ranking: Johnson--Lindenstrauss preserves distances but not retrieval order, sign quantization is extreme but brittle, truncated SVD is optimal in reconstruction yet costly to store, and scalar quantization is a deceptively strong baseline. TurboQuant's quantized-JL residual earns its overhead only at aggressive bit budgets, where it converts a 1-bit-class compressor into a competitive retriever. The practical recommendation is concise: choose TurboQuant when you must compress below 4 bits per dimension, choose scalar quantization otherwise, and always compare methods on measured bits per dimension against a retrieval metric, never on nominal labels or distance error alone.
 
 \begin{thebibliography}{9}
 
@@ -244,7 +285,7 @@ Vector compression is governed by a single product, $n \cdot d \cdot (\text{bits
 \bibitem{polarquant2026} Zandieh, A., et al. (2026). PolarQuant: Quantizing the KV cache with polar coordinates. \emph{AISTATS}. \href{https://arxiv.org/abs/2502.02617}{arXiv:2502.02617}.
 \bibitem{turboquant2026} Zandieh, A., Mirrokni, V., et al. (2026). TurboQuant: Online vector quantization with near-optimal distortion rate. \emph{ICLR}. \href{https://arxiv.org/abs/2504.19874}{arXiv:2504.19874}.
 \bibitem{turboquantblog} Google Research (2026). \href{https://research.google/blog/turboquant-redefining-ai-efficiency-with-extreme-compression/}{TurboQuant: Redefining AI efficiency with extreme compression}.
-\bibitem{openai} OpenAI. \href{https://platform.openai.com/docs/guides/embeddings}{Embeddings guide} --- \texttt{text-embedding-3-small}, $d = 256$.
+\bibitem{openai} OpenAI. \href{https://platform.openai.com/docs/guides/embeddings}{Embeddings guide}: \texttt{text-embedding-3-small}, $d = 256$.
 
 \end{thebibliography}
 
