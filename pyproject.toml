@@ -1,9 +1,19 @@
 [project]
 name = "vector-linalg"
 version = "0.2.0"
-description = "Vector compression survey — JL, quantization, token embeddings"
+description = "From-scratch survey of vector compression methods (JL, SVD, sign/scalar quantization, TurboQuant) evaluated on token and RAG retrieval"
 readme = "README.md"
 requires-python = ">=3.12"
+authors = [
+    { name = "Clayton Schmidter" },
+]
+keywords = [
+    "linear-algebra",
+    "vector-compression",
+    "quantization",
+    "embeddings",
+    "retrieval-augmented-generation",
+]
 dependencies = [
     "polars>=1.24",
     "httpx>=0.28",
@@ -14,6 +24,9 @@ dependencies = [
     "scipy>=1.14",
     "openai>=1.0",
 ]
+
+[project.urls]
+Repository = "https://github.com/claytomode/math5110-vector-compression"
 
 [build-system]
 requires = ["hatchling"]
