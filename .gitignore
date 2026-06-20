@@ -34,6 +34,13 @@ node_modules/
 frontend/.svelte-kit/
 frontend/build/
 
+# LaTeX build artifacts (keep paper.tex and paper.pdf)
+docs/*.aux
+docs/*.log
+docs/*.out
+docs/*.toc
+docs/*.synctex.gz
+
 .reference-lin-prog/
 Thumbs.db
 .idea/

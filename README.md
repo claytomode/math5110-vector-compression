@@ -90,9 +90,7 @@ uv run python scripts/run_all.py
 - `python/data/presentation_results.json` (headline numbers for slides)
 
 **Notebook:** `python/notebooks/application.ipynb`  
-**Paper:** `docs/PAPER.md` — full academic write-up (theory → methods → results)  
-**Extended write-up:** `docs/WRITEUP.md` — longer narrative with implementation detail  
-**Survey notes:** `docs/SURVEY.md` — Part 1 theory
+**Paper:** `docs/PAPER.md` (Markdown) · `docs/paper.tex` + `docs/paper.pdf` (typeset) — full academic write-up (theory → methods → results)
 
 ## Repo layout
 
@@ -102,9 +100,8 @@ uv run python scripts/run_all.py
 | `backend/` | FastAPI search API (`uv sync --directory backend`) |
 | `frontend/` | SvelteKit UI (`bun install` in `frontend/`) |
 | `scripts/run_all.py` | End-to-end pipeline |
-| `docs/PAPER.md` | Final academic paper |
-| `docs/WRITEUP.md` | Extended theory-to-results write-up |
-| `docs/SURVEY.md` | Part 1 theory narrative |
+| `docs/PAPER.md` | Final academic paper (Markdown) |
+| `docs/paper.tex`, `docs/paper.pdf` | Typeset LaTeX paper + rendered PDF |
 
 ## Demo path (presentation)
 

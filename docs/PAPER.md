@@ -224,4 +224,4 @@ Vector compression is governed by a single product, $n \cdot d \cdot (\text{bits
 
 ---
 
-*Companion documents: the [survey notes](SURVEY.md) cover Part 1 theory, and the [extended write-up](WRITEUP.md) gives a longer narrative with full implementation detail. Reproduce all numbers and figures with `uv run python scripts/run_all.py`.*
+*A typeset version of this paper is available as [`paper.tex`](paper.tex) / [`paper.pdf`](paper.pdf). Reproduce all numbers and figures with `uv run python scripts/run_all.py`.*
