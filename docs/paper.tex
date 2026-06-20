@@ -207,7 +207,7 @@ Figure~\ref{fig:distance} reports mean relative pairwise \emph{Euclidean} distan
 
 \subsection{RAG compression frontier}
 
-Figure~\ref{fig:frontier} plots top-3 overlap (accuracy) against compression ratio, with the Pareto frontier traced in red. The headline numbers, taken from \texttt{python/data/presentation\_results.json}, are given in Table~\ref{tab:rag}.
+To produce these results we compress the full set of 1{,}380 chunk embeddings once per configuration, then replay all 300 queries through the scoring function matched to that compressor and average overlap@3 against the full-precision ranking. The compression ratio for each row is computed from the size of the representation actually stored (codes, signs, shared bases, and per-vector norms), not from its nominal label, so the table reflects measured cost rather than design intent. Figure~\ref{fig:frontier} plots top-3 overlap against compression ratio with the Pareto frontier traced in red, and Table~\ref{tab:rag} lists the underlying numbers.
 
 \begin{table}[htbp]
   \centering
