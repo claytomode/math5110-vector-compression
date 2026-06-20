@@ -242,14 +242,14 @@ To produce these results we compress the full set of 1{,}380 chunk embeddings on
   \end{tabular}
 \end{table}
 
-Reading the scatter in Figure~\ref{fig:frontier}, each point is one index; better methods push toward the upper-right (high accuracy, high compression), and the red curve connects the Pareto-optimal ones. Two features dominate. First, the JL points (\texttt{jl\_128}, \texttt{jl\_64}) sit far \emph{below} the frontier: despite their strong distance guarantees they are the worst retrievers per bit, the clearest visual statement of the geometry-versus-ranking gap. Second, the frontier itself changes hands with the budget. In the low-bit corner the TurboQuant points lie above the scalar points at matched stage-1 bits, where the residual correction is decisive (TurboQuant 2-bit at 76.1\% versus scalar 2-bit at 62.8\%, a 13-point gain). Once 4 bits are affordable the two families converge in accuracy (93.3\% vs 93.2\%) and scalar takes over the frontier, because it avoids TurboQuant's rotation and residual overhead and therefore lands at a smaller measured bit cost.
-
 \begin{figure}[H]
   \centering
   \includegraphics[width=\textwidth]{rag_compression_frontier.png}
   \caption{RAG compression frontier: top-3 overlap versus compression ratio (upper-right is better), with the Pareto-optimal methods joined by the red curve. JL configurations sit well below the frontier; TurboQuant owns the low-bit corner, while scalar quantization takes over once 4 bits per dimension are affordable.}
   \label{fig:frontier}
 \end{figure}
+
+Reading the scatter in Figure~\ref{fig:frontier}, each point is one index; better methods push toward the upper-right (high accuracy, high compression), and the red curve connects the Pareto-optimal ones. Two features dominate. First, the JL points (\texttt{jl\_128}, \texttt{jl\_64}) sit far \emph{below} the frontier: despite their strong distance guarantees they are the worst retrievers per bit, the clearest visual statement of the geometry-versus-ranking gap. Second, the frontier itself changes hands with the budget. In the low-bit corner the TurboQuant points lie above the scalar points at matched stage-1 bits, where the residual correction is decisive (TurboQuant 2-bit at 76.1\% versus scalar 2-bit at 62.8\%, a 13-point gain). Once 4 bits are affordable the two families converge in accuracy (93.3\% vs 93.2\%) and scalar takes over the frontier, because it avoids TurboQuant's rotation and residual overhead and therefore lands at a smaller measured bit cost.
 
 \subsection{Retrieval drift}
 
